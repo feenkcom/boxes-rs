@@ -1,9 +1,9 @@
 [package]
 name = "array-box"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
-repository = "https://github.com/feenkcom/value-box-rs/array-box"
+repository = "https://github.com/feenkcom/boxes-rs/tree/main/array-box"
 license = "MIT"
 keywords = ["ffi"]
 description = "Create Rust vector from C data, either owned or not owned."
