@@ -1,0 +1,11 @@
+[package]
+name = "value-box"
+version = "0.1.0"
+authors = ["feenk gmbh <contact@feenk.com>"]
+edition = "2021"
+
+[dependencies]
+log = "0.4"
+thiserror = "1.0"
+user-error = "1.2"
+anyhow = { version = "1.0", optional = true }
