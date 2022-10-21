@@ -1,40 +1,43 @@
 use std::ffi::CStr;
 use std::ops::Range;
 use std::slice;
+#[cfg(feature = "widestring")]
 use widestring::U32String;
 
 #[derive(Debug, Clone)]
-pub enum BoxerStringOrigin {
-    Wide(U32String),
+pub enum StringBoxOrigin {
     Byte(Vec<u8>),
     String,
+    #[cfg(feature = "widestring")]
+    Wide(U32String),
 }
 
 #[repr(u8)]
 #[derive(Debug, Clone)]
-pub enum BoxerStringOriginType {
-    Wide,
+pub enum StringBoxOriginType {
     Byte,
     UTF8,
+    Wide,
 }
 
-impl From<BoxerStringOrigin> for BoxerStringOriginType {
-    fn from(origin: BoxerStringOrigin) -> BoxerStringOriginType {
+impl From<StringBoxOrigin> for StringBoxOriginType {
+    fn from(origin: StringBoxOrigin) -> StringBoxOriginType {
         match origin {
-            BoxerStringOrigin::Wide(_) => BoxerStringOriginType::Wide,
-            BoxerStringOrigin::Byte(_) => BoxerStringOriginType::Byte,
-            BoxerStringOrigin::String => BoxerStringOriginType::UTF8,
+            StringBoxOrigin::Byte(_) => StringBoxOriginType::Byte,
+            StringBoxOrigin::String => StringBoxOriginType::UTF8,
+            #[cfg(feature = "widestring")]
+            StringBoxOrigin::Wide(_) => StringBoxOriginType::Wide,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct BoxerString {
-    origin: BoxerStringOrigin,
+pub struct StringBox {
+    origin: StringBoxOrigin,
     string: String,
 }
 
-impl BoxerString {
+impl StringBox {
     pub fn new() -> Self {
         Self::from_string(String::new())
     }
@@ -42,23 +45,25 @@ impl BoxerString {
     /// Create from Rust string
     pub fn from_string(string: String) -> Self {
         Self {
-            origin: BoxerStringOrigin::String,
+            origin: StringBoxOrigin::String,
             string,
         }
     }
 
     /// Create from a wide string by copying the data
+    #[cfg(feature = "widestring")]
     pub unsafe fn from_wide_string_data(data: *const u32, length: usize) -> Self {
         let wide_string = slice::from_raw_parts(data, length).to_vec();
         Self::from_wide_string(wide_string)
     }
 
     /// Create from a wide string vector
+    #[cfg(feature = "widestring")]
     pub fn from_wide_string(data: Vec<u32>) -> Self {
         let wide_string = U32String::from_vec(data);
         let string = wide_string.to_string_lossy();
         Self {
-            origin: BoxerStringOrigin::Wide(wide_string),
+            origin: StringBoxOrigin::Wide(wide_string),
             string,
         }
     }
@@ -73,7 +78,7 @@ impl BoxerString {
     pub fn from_byte_string(data: Vec<u8>) -> Self {
         let string = data.iter().map(|&c| c as char).collect::<String>();
         Self {
-            origin: BoxerStringOrigin::Byte(data),
+            origin: StringBoxOrigin::Byte(data),
             string,
         }
     }
@@ -96,14 +101,14 @@ impl BoxerString {
                 .into_owned()
         };
         Self {
-            origin: BoxerStringOrigin::String,
+            origin: StringBoxOrigin::String,
             string,
         }
     }
 
     /// Replace the string with a given instance
     pub fn set_string(&mut self, string: String) {
-        self.origin = BoxerStringOrigin::String;
+        self.origin = StringBoxOrigin::String;
         self.string = string;
     }
 
@@ -188,38 +193,46 @@ impl BoxerString {
     }
 }
 
-#[test]
-pub fn test_from_wide_string() {
-    let wide_string = vec![1087u32, 1088, 1080, 1074, 1077, 1090];
-    let string = BoxerString::from_wide_string(wide_string);
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    assert_eq!(string.to_string(), String::from("привет"));
-}
+    #[test]
+    pub fn test_from_wide_string() {
+        let wide_string = vec![1087u32, 1088, 1080, 1074, 1077, 1090];
+        let string = StringBox::from_wide_string(wide_string);
 
-#[test]
-pub fn test_from_byte_string() {
-    let byte_string = vec![104u8, 101, 108, 108, 111];
-    let string = BoxerString::from_byte_string(byte_string);
-
-    assert_eq!(string.to_string(), String::from("hello"));
-}
-
-#[test]
-pub fn test_from_utf8_string() {
-    let utf8_string = vec![104u8, 101, 108, 108, 111, 0];
-    let string = BoxerString::from_utf8_string(utf8_string.as_slice());
-
-    assert_eq!(string.to_string(), String::from("hello"));
-}
-
-#[test]
-pub fn sparkle() {
-    let sparkle = String::from("💖");
-
-    assert_eq!(sparkle.len(), 4);
-
-    for char in sparkle.char_indices() {
-        println!("{:?}", char);
+        assert_eq!(string.to_string(), String::from("привет"));
     }
-    println!("{:?}", sparkle.bytes());
+
+    #[test]
+    pub fn test_from_byte_string() {
+        let byte_string = vec![104u8, 101, 108, 108, 111];
+        let string = StringBox::from_byte_string(byte_string);
+
+        assert_eq!(string.to_string(), String::from("hello"));
+    }
+
+    #[test]
+    pub fn test_from_utf8_string() {
+        let utf8_string = vec![104u8, 101, 108, 108, 111, 0];
+        let string = StringBox::from_utf8_string(utf8_string.as_slice());
+
+        assert_eq!(string.to_string(), String::from("hello"));
+    }
+
+    #[test]
+    pub fn sparkle() {
+        let sparkle = String::from("💖");
+        let string_box = StringBox::from_string(sparkle.clone());
+
+        assert_eq!(sparkle.len(), 4);
+        assert_eq!(string_box.len(), 4);
+        assert_eq!(string_box.char_count(), 1);
+
+        for char in sparkle.char_indices() {
+            println!("{:?}", char);
+        }
+        println!("{:?}", sparkle.bytes());
+    }
 }

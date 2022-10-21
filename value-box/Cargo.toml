@@ -6,7 +6,7 @@ edition = "2021"
 repository = "https://github.com/feenkcom/value-box-rs/value-box"
 license = "MIT"
 keywords = ["ffi"]
-description = "A short description of my package"
+description = "Allows developers to pass Rust-allocated structures over ffi."
 
 [dependencies]
 log = "0.4"

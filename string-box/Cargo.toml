@@ -1,7 +1,12 @@
 [package]
 name = "string-box"
-version = "0.1.0"
+version = "1.0.0"
+authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
+repository = "https://github.com/feenkcom/value-box-rs/value-box"
+license = "MIT"
+keywords = ["ffi"]
+description = "Create Rust string from UTF-8 string, byte string or wide string."
 
 [dependencies]
-widestring = "1.0"
+widestring = { version = "1.0", optional = true }

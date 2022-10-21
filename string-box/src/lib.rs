@@ -1,3 +1,3 @@
-mod string;
+mod string_box;
 
-pub use string::*;
+pub use crate::string_box::*;
