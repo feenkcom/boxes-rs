@@ -7,6 +7,10 @@ repository = "https://github.com/feenkcom/value-box-rs/value-box"
 license = "MIT"
 keywords = ["ffi"]
 description = "A short description of my package"
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
 
 [dependencies]
 log = "0.4"
