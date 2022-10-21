@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "array-box",
     "string-box",
     "value-box",
 ]
