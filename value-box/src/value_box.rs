@@ -144,24 +144,24 @@ pub trait ValueBoxPointer<T> {
             .or_log(std::ptr::null())
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `take_value` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `take_value` instead")]
     fn to_value(&self) -> Result<T> {
         self.take_value()
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `has_value` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `has_value` instead")]
     fn is_valid(&self) -> bool {
         self.has_value()
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref()?.replace()` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref()?.replace()` instead")]
     fn mutate(&self, object: T) {
         self.to_ref()
             .and_then(|mut reference| Ok(reference.replace(object)))
             .log();
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_box<DefaultBlock, Block, Return>(&self, default: DefaultBlock, block: Block) -> Return
     where
         DefaultBlock: FnOnce() -> Return,
@@ -174,7 +174,7 @@ pub trait ValueBoxPointer<T> {
         }
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with<DefaultBlock, Block, Return>(&self, default: DefaultBlock, block: Block) -> Return
     where
         DefaultBlock: FnOnce() -> Return,
@@ -185,7 +185,7 @@ pub trait ValueBoxPointer<T> {
             .unwrap_or_else(|_| default())
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_not_null<Block>(&self, block: Block)
     where
         Block: FnOnce(&mut T),
@@ -195,7 +195,7 @@ pub trait ValueBoxPointer<T> {
             .log();
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_not_null_return<Block, Return>(&self, default: Return, block: Block) -> Return
     where
         Block: FnOnce(&mut T) -> Return,
@@ -205,7 +205,7 @@ pub trait ValueBoxPointer<T> {
             .or_log(default)
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_value<DefaultBlock, Block, Return>(&self, default: DefaultBlock, block: Block) -> Return
     where
         DefaultBlock: FnOnce() -> Return,
@@ -217,7 +217,7 @@ pub trait ValueBoxPointer<T> {
             .unwrap_or_else(|_| default())
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_not_null_value<Block>(&self, block: Block)
     where
         Block: FnOnce(T),
@@ -228,7 +228,7 @@ pub trait ValueBoxPointer<T> {
             .log();
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_not_null_value_return<Block, Return>(&self, default: Return, block: Block) -> Return
     where
         Block: FnOnce(T) -> Return,
@@ -239,7 +239,7 @@ pub trait ValueBoxPointer<T> {
             .unwrap_or(default)
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_not_null_value_mutate<Block>(&mut self, block: Block)
     where
         Block: FnOnce(T) -> T,
@@ -254,7 +254,7 @@ pub trait ValueBoxPointer<T> {
             .log();
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
     fn with_value_consumed<DefaultBlock, Block, Return>(
         &mut self,
         default: DefaultBlock,
@@ -274,7 +274,7 @@ pub trait ValueBoxPointer<T> {
             .unwrap_or_else(|_| default())
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `take_value` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `take_value` instead")]
     fn with_not_null_value_consumed<Block>(&mut self, block: Block)
     where
         Block: FnOnce(T),
@@ -282,7 +282,7 @@ pub trait ValueBoxPointer<T> {
         self.take_value().and_then(|value| Ok(block(value))).log();
     }
 
-    #[deprecated(since = "0.3.0", note = "please use `take_value` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `take_value` instead")]
     fn with_not_null_value_consumed_return<Block, Return>(
         &mut self,
         default: Return,

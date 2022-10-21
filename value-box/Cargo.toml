@@ -3,6 +3,10 @@ name = "value-box"
 version = "0.1.0"
 authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
+repository = "https://github.com/feenkcom/value-box-rs/value-box"
+license = "MIT"
+keywords = ["ffi"]
+description = "A short description of my package"
 
 [dependencies]
 log = "0.4"
