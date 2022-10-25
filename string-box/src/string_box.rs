@@ -1,14 +1,13 @@
 use std::ffi::CStr;
 use std::ops::Range;
 use std::slice;
-#[cfg(feature = "widestring")]
 use widestring::U32String;
 
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub enum StringBoxOrigin {
     Byte(Vec<u8>),
     String,
-    #[cfg(feature = "widestring")]
     Wide(U32String),
 }
 
@@ -25,7 +24,6 @@ impl From<StringBoxOrigin> for StringBoxOriginType {
         match origin {
             StringBoxOrigin::Byte(_) => StringBoxOriginType::Byte,
             StringBoxOrigin::String => StringBoxOriginType::UTF8,
-            #[cfg(feature = "widestring")]
             StringBoxOrigin::Wide(_) => StringBoxOriginType::Wide,
         }
     }
@@ -51,14 +49,12 @@ impl StringBox {
     }
 
     /// Create from a wide string by copying the data
-    #[cfg(feature = "widestring")]
     pub unsafe fn from_wide_string_data(data: *const u32, length: usize) -> Self {
         let wide_string = slice::from_raw_parts(data, length).to_vec();
         Self::from_wide_string(wide_string)
     }
 
     /// Create from a wide string vector
-    #[cfg(feature = "widestring")]
     pub fn from_wide_string(data: Vec<u32>) -> Self {
         let wide_string = U32String::from_vec(data);
         let string = wide_string.to_string_lossy();
