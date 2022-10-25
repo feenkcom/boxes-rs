@@ -149,8 +149,8 @@ impl<T> Drop for ArrayBox<T> {
 }
 
 impl<T> ArrayBox<T>
-    where
-        T: Default + Copy,
+where
+    T: Default + Copy,
 {
     pub fn byte_size(count: usize) -> usize {
         std::mem::size_of::<T>() * count

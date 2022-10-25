@@ -1,0 +1,11 @@
+[package]
+name = "geometry-box"
+version = "1.0.0"
+authors = ["feenk gmbh <contact@feenk.com>"]
+edition = "2021"
+repository = "https://github.com/feenkcom/boxes-rs/tree/main/geometry-box"
+license = "MIT"
+keywords = ["ffi"]
+description = "Provides Point, Size and u128 boxes that are safe to pass over ffi."
+
+[dependencies]
