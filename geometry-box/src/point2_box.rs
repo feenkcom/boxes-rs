@@ -20,32 +20,4 @@ where
     pub fn new(x: T, y: T) -> Self {
         PointBox::<T> { x, y }
     }
-
-    // pub fn boxer_point_default() -> *mut ValueBox<BoxerPoint<T>> {
-    //     ValueBox::new(BoxerPoint::<T>::default()).into_raw()
-    // }
-    //
-    // pub fn boxer_point_create(x: T, y: T) -> *mut ValueBox<BoxerPoint<T>> {
-    //     ValueBox::new(BoxerPoint::<T>::new(x, y)).into_raw()
-    // }
-    //
-    // pub fn boxer_point_drop(ptr: *mut ValueBox<BoxerPoint<T>>) {
-    //     ptr.release();
-    // }
-    //
-    // pub fn boxer_point_get_x(_maybe_null_ptr: *mut ValueBox<BoxerPoint<T>>) -> T {
-    //     _maybe_null_ptr.with_not_null_return(0u8.into(), |point| point.x)
-    // }
-    //
-    // pub fn boxer_point_set_x(_maybe_null_ptr: *mut ValueBox<BoxerPoint<T>>, x: T) {
-    //     _maybe_null_ptr.with_not_null(|point| point.x = x)
-    // }
-    //
-    // pub fn boxer_point_get_y(_maybe_null_ptr: *mut ValueBox<BoxerPoint<T>>) -> T {
-    //     _maybe_null_ptr.with_not_null_return(0u8.into(), |point| point.y)
-    // }
-    //
-    // pub fn boxer_point_set_y(_maybe_null_ptr: *mut ValueBox<BoxerPoint<T>>, y: T) {
-    //     _maybe_null_ptr.with_not_null(|point| point.y = y)
-    // }
 }
