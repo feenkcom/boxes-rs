@@ -104,7 +104,7 @@ impl<T> ArrayBox<T> {
         slice[index] = object;
     }
 
-    pub fn at(&mut self, index: usize) -> T
+    pub fn at(&self, index: usize) -> T
     where
         T: Clone,
     {

@@ -1,6 +1,6 @@
 [package]
 name = "array-box"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
 repository = "https://github.com/feenkcom/boxes-rs/tree/main/array-box"
