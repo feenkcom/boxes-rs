@@ -1,0 +1,11 @@
+[package]
+name = "reference-box"
+version = "1.0.0"
+authors = ["feenk gmbh <contact@feenk.com>"]
+edition = "2021"
+repository = "https://github.com/feenkcom/boxes-rs/tree/main/reference-box"
+license = "MIT"
+keywords = ["ffi", "unsafe"]
+description = "Allows developers to pass non-owned references to Rust-allocated structures over ffi."
+
+[dependencies]

@@ -2,6 +2,7 @@
 members = [
     "array-box",
     "geometry-box",
+    "reference-box",
     "string-box",
     "value-box",
 ]
