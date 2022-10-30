@@ -56,33 +56,33 @@ impl<T> ReferenceBox<T> {
 
 pub trait ReferenceBoxPointer<T> {
     fn with<Block, Return>(&self, block: Block) -> Return
-        where
-            Block: FnOnce(&mut T) -> Return;
+    where
+        Block: FnOnce(&mut T) -> Return;
     fn with_value<Block, Return>(&self, block: Block) -> Return
-        where
-            Block: FnOnce(T) -> Return,
-            T: Copy;
+    where
+        Block: FnOnce(T) -> Return,
+        T: Copy;
     fn with_not_null<Block>(&self, block: Block)
-        where
-            Block: FnOnce(&mut T);
+    where
+        Block: FnOnce(&mut T);
     fn with_not_null_return<Block, Return>(&self, default: Return, block: Block) -> Return
-        where
-            Block: FnOnce(&mut T) -> Return;
+    where
+        Block: FnOnce(&mut T) -> Return;
     fn with_not_null_return_block<DefaultBlock, Block, Return>(
         &self,
         default: DefaultBlock,
         block: Block,
     ) -> Return
-        where
-            DefaultBlock: FnOnce() -> Return,
-            Block: FnOnce(&mut T) -> Return;
+    where
+        DefaultBlock: FnOnce() -> Return,
+        Block: FnOnce(&mut T) -> Return;
     fn drop(self);
 }
 
 impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
     fn with<Block, Return>(&self, block: Block) -> Return
-        where
-            Block: FnOnce(&mut T) -> Return,
+    where
+        Block: FnOnce(&mut T) -> Return,
     {
         assert_eq!(self.is_null(), false, "Pointer must not be null!");
 
@@ -100,9 +100,9 @@ impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
     }
 
     fn with_value<Block, Return>(&self, block: Block) -> Return
-        where
-            Block: FnOnce(T) -> Return,
-            T: Copy,
+    where
+        Block: FnOnce(T) -> Return,
+        T: Copy,
     {
         assert_eq!(self.is_null(), false, "Pointer must not be null!");
 
@@ -117,8 +117,8 @@ impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
     }
 
     fn with_not_null<Block>(&self, block: Block)
-        where
-            Block: FnOnce(&mut T),
+    where
+        Block: FnOnce(&mut T),
     {
         if self.is_null() {
             return;
@@ -129,8 +129,8 @@ impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
     }
 
     fn with_not_null_return<Block, Return>(&self, default: Return, block: Block) -> Return
-        where
-            Block: FnOnce(&mut T) -> Return,
+    where
+        Block: FnOnce(&mut T) -> Return,
     {
         if self.is_null() {
             return default;
@@ -143,9 +143,9 @@ impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
         default: DefaultBlock,
         block: Block,
     ) -> Return
-        where
-            DefaultBlock: FnOnce() -> Return,
-            Block: FnOnce(&mut T) -> Return,
+    where
+        DefaultBlock: FnOnce() -> Return,
+        Block: FnOnce(&mut T) -> Return,
     {
         if self.is_null() {
             return default();
