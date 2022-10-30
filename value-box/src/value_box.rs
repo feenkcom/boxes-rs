@@ -143,6 +143,15 @@ pub trait ValueBoxPointer<T> {
         self.to_ref().map(|t| op(&t))
     }
 
+    /// Evaluate a given function with a mutable reference to the boxed value.
+    /// The lifetime of the reference can not outlive the closure.
+    fn with_mut<R, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(&mut T) -> R,
+    {
+        self.to_ref().map(|mut t| op(&mut t))
+    }
+
     /// Evaluate a given function with a clone of the boxed value.
     /// The boxed type `T` must implement [`Clone`].
     fn with_clone<R, F>(&self, op: F) -> Result<R>
