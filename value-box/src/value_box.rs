@@ -130,8 +130,29 @@ impl<T> BoxRef<T> {
 pub trait ValueBoxPointer<T> {
     /// Get the reference to the underlying value without dropping it.
     fn to_ref(&self) -> Result<BoxRef<T>>;
-    ///
+
+    /// Take the value out of the box.
     fn take_value(&self) -> Result<T>;
+
+    /// Evaluate a given function with a reference to the boxed value.
+    /// The lifetime of the reference can not outlive the closure.
+    fn with_ref<R, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(&T) -> R,
+    {
+        self.to_ref().map(|t| op(&t))
+    }
+
+    /// Evaluate a given function with a clone of the boxed value.
+    /// The boxed type `T` must implement [`Clone`].
+    fn with_clone<R, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(T) -> R,
+        T: Clone,
+    {
+        self.to_ref().map(|t| op(t.clone()))
+    }
+
     fn release(self);
 
     fn has_value(&self) -> bool {
