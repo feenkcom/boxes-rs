@@ -143,6 +143,52 @@ pub trait ValueBoxPointer<T> {
         self.to_ref().map(|t| op(&t))
     }
 
+    /// Evaluate a given function with references to given boxed values.
+    /// The lifetime of the reference can not outlive the closure.
+    fn with_ref_ref<R, F, P>(&self, ptr: *mut ValueBox<P>, op: F) -> Result<R>
+    where
+        F: FnOnce(&T, &P) -> R,
+    {
+        self.to_ref().and_then(|t| ptr.to_ref().map(|p| op(&t, &p)))
+    }
+
+    /// Evaluate a given function with references to given boxed values.
+    /// The lifetime of the reference can not outlive the closure.
+    fn with_ref_ref_ref<R, F, P1, P2>(
+        &self,
+        ptr1: *mut ValueBox<P1>,
+        ptr2: *mut ValueBox<P2>,
+        op: F,
+    ) -> Result<R>
+    where
+        F: FnOnce(&T, &P1, &P2) -> R,
+    {
+        self.to_ref().and_then(|t| {
+            ptr1.to_ref()
+                .and_then(|p1| ptr2.to_ref().map(|p2| op(&t, &p1, &p2)))
+        })
+    }
+
+    /// Evaluate a given function with references to given boxed values.
+    /// The lifetime of the reference can not outlive the closure.
+    fn with_ref_ref_ref_ref<R, F, P1, P2, P3>(
+        &self,
+        ptr1: *mut ValueBox<P1>,
+        ptr2: *mut ValueBox<P2>,
+        ptr3: *mut ValueBox<P3>,
+        op: F,
+    ) -> Result<R>
+    where
+        F: FnOnce(&T, &P1, &P2, &P3) -> R,
+    {
+        self.to_ref().and_then(|t| {
+            ptr1.to_ref().and_then(|p1| {
+                ptr2.to_ref()
+                    .and_then(|p2| ptr3.to_ref().map(|p3| op(&t, &p1, &p2, &p3)))
+            })
+        })
+    }
+
     /// Evaluate a given function with a mutable reference to the boxed value.
     /// The lifetime of the reference can not outlive the closure.
     fn with_mut<R, F>(&self, op: F) -> Result<R>
