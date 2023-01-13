@@ -5,6 +5,7 @@ members = [
     "reference-box",
     "string-box",
     "value-box",
+    "value-box-extensions"
 ]
 resolver = "2"
 
