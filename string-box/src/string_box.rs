@@ -11,8 +11,8 @@ pub enum StringBoxOrigin {
     Wide(U32String),
 }
 
-#[repr(u8)]
 #[derive(Debug, Clone)]
+#[repr(u8)]
 pub enum StringBoxOriginType {
     Byte,
     UTF8,
@@ -30,6 +30,7 @@ impl From<StringBoxOrigin> for StringBoxOriginType {
 }
 
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub struct StringBox {
     origin: StringBoxOrigin,
     string: String,
