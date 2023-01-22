@@ -208,6 +208,23 @@ pub trait ValueBoxPointer<T> {
         self.to_ref().map(|t| op(t.clone()))
     }
 
+    /// Evaluate a given function with the value taken out of the box
+    /// and place the new value back. The value returned by the function
+    /// must be of the same type as the box
+    fn replace_value<F>(&self, op: F) -> Result<()>
+    where
+        F: FnOnce(T) -> T,
+    {
+        self.to_ref().and_then(|mut t| {
+            t.take_value()
+                .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
+                .map(|previous_value| {
+                    let new_value = op(previous_value);
+                    t.replace(new_value);
+                })
+        })
+    }
+
     fn release(self);
 
     fn has_value(&self) -> bool {
