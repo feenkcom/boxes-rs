@@ -34,7 +34,7 @@ macro_rules! value_box {
     ($var:expr) => {{
         {
             let value = $var;
-            let phlow_type_fn = phlow_type_fn_of_val(&value);
+            let phlow_type_fn = crate::phlow_type_fn_of_val(&value);
             value_box::ValueBox::new_phlow(value, phlow_type_fn)
         }
     }};
