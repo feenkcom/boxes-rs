@@ -21,8 +21,16 @@ mod value_box_container;
 mod value_box_phlow;
 
 #[macro_export]
+#[cfg(not(feature = "phlow"))]
+macro_rules! value_box {
+    ($var:expr) => {{
+        value_box::ValueBox::new($var)
+    }};
+}
+
+#[macro_export]
 #[cfg(feature = "phlow")]
-macro_rules! phlow_box {
+macro_rules! value_box {
     ($var:expr) => {{
         {
             let value = $var;
