@@ -1,119 +1,143 @@
-use std::any::type_name;
+use std::any::{type_name, Any};
 use std::fmt::{Debug, Formatter};
-use std::intrinsics::transmute;
 use std::mem::ManuallyDrop;
-use std::ops::{Deref, DerefMut};
 
-use crate::{BoxerError, Result, ReturnBoxerResult};
+use crate::{BoxerError, Container, Result, ReturnBoxerResult, ValueBoxContainer};
 
 #[repr(transparent)]
-pub struct ValueBox<T> {
-    value: Option<T>,
+pub struct ValueBox<T: Any> {
+    container: Container<T>,
 }
 
-impl<T> ValueBox<T> {
+impl<T: Any> ValueBox<T> {
     pub fn new(object: T) -> Self {
-        ValueBox {
-            value: Some(object),
+        Self {
+            container: Container::Value(Some(object)),
+        }
+    }
+
+    #[cfg(feature = "phlow")]
+    pub fn new_phlow(object: T, phlow_type_fn: fn() -> phlow::PhlowType) -> Self {
+        Self {
+            container: Container::PhlowValue(crate::PhlowValue::new(object, phlow_type_fn)),
         }
     }
 
     pub fn null() -> Self {
-        ValueBox { value: None }
+        ValueBox {
+            container: Container::Value(None),
+        }
     }
 
     pub fn has_value(&self) -> bool {
-        trace!("[has_value] value pointer: {:?}", unsafe {
-            transmute::<Option<&T>, *const T>(self.value.as_ref())
-        });
-        self.value.is_some()
+        self.container.has_value()
     }
 
     pub fn replace(&mut self, value: T) -> Option<T> {
-        self.value.replace(value)
+        self.container.replace_value(value)
     }
 
     pub fn set_value(&mut self, object: T) {
-        self.value = Some(object)
+        self.container.replace_value(object);
     }
 
     pub fn clone_value(&self) -> Option<T>
     where
         T: Clone,
     {
-        self.value.clone()
+        self.container.clone_value()
     }
 
     pub fn take_value(&mut self) -> Option<T> {
-        self.value.take()
+        self.container.take_value()
     }
 
     pub fn into_raw(self) -> *mut Self {
         into_raw(Box::new(self))
     }
 
-    pub fn as_ref_mut(&mut self) -> Option<&mut T> {
-        self.value.as_mut()
-    }
-
     pub fn as_ptr(&self) -> *const T {
-        self.value
-            .as_ref()
-            .map_or(std::ptr::null(), |reference| reference as *const T)
-    }
-
-    pub fn as_ptr_mut(&mut self) -> *mut T {
-        self.value
-            .as_mut()
-            .map_or(std::ptr::null_mut(), |reference| reference as *mut T)
+        self.container.as_ptr()
     }
 }
 
-impl<T> Drop for ValueBox<T> {
+impl<T: 'static> ValueBox<T> {
+    #[cfg(feature = "phlow")]
+    /// Try to get a phlow object from the lazily defined phlow value.
+    /// Note: By definition `PhlowObject` owns the value, therefore
+    /// internally we change the storage container for the value to `PhlowObject`.
+    pub fn phlow_object(&mut self) -> Option<phlow::PhlowObject> {
+        match &mut self.container {
+            Container::Value(_) => None,
+            Container::PhlowValue(value) => value.phlow_object(),
+        }
+    }
+}
+
+impl<T: Any> Drop for ValueBox<T> {
     fn drop(&mut self) {
-        debug!(
+        trace!(
             "Dropping {} of {}",
-            self.value.as_ref().map_or("None", |_| { "Some" }),
+            (if self.has_value() { "Some" } else { "None" }),
             type_name::<T>()
         );
     }
 }
 
 #[repr(transparent)]
-pub struct BoxRef<T> {
+pub struct BoxRef<T: Any> {
     value_box: ManuallyDrop<Box<ValueBox<T>>>,
 }
 
-impl<T> Deref for BoxRef<T> {
-    type Target = T;
+impl<T: Any> BoxRef<T> {
+    pub fn with_ref<R>(&self, op: impl FnOnce(&T) -> Result<R>) -> Result<R> {
+        match &self.value_box.container {
+            Container::Value(value) => op(value.as_ref().unwrap()),
+            #[cfg(feature = "phlow")]
+            Container::PhlowValue(value) => match &value.container {
+                crate::PhlowValueContainer::Lazy(value) => {
+                    let value = &value.value;
+                    op(value.as_ref().unwrap())
+                }
+                crate::PhlowValueContainer::Object(object) => {
+                    let value = object.value_ref::<T>().unwrap();
+                    op(&value)
+                }
+            },
+        }
+    }
 
-    fn deref(&self) -> &Self::Target {
-        self.value_box.deref().value.as_ref().unwrap()
+    pub fn with_mut<R>(&mut self, op: impl FnOnce(&mut T) -> Result<R>) -> Result<R> {
+        match &mut self.value_box.container {
+            Container::Value(value) => op(value.as_mut().unwrap()),
+            #[cfg(feature = "phlow")]
+            Container::PhlowValue(value) => match &mut value.container {
+                crate::PhlowValueContainer::Lazy(value) => op(value.value.as_mut().unwrap()),
+                crate::PhlowValueContainer::Object(object) => {
+                    let mut value = object.value_mut::<T>().unwrap();
+                    op(&mut value)
+                }
+            },
+        }
     }
 }
 
-impl<T> DerefMut for BoxRef<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.value_box.deref_mut().value.as_mut().unwrap()
-    }
-}
-
-impl<T> Debug for BoxRef<T> {
+impl<T: Any> Debug for BoxRef<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BoxRef")
             .field(
                 "value",
-                self.value_box
-                    .deref()
-                    .value
-                    .as_ref()
-                    .map_or(&"None", |_| &"Some"),
+                if self.value_box.has_value() {
+                    &"Some"
+                } else {
+                    &"None"
+                },
             )
             .finish()
     }
 }
 
-impl<T> BoxRef<T> {
+impl<T: Any> BoxRef<T> {
     pub fn replace(&mut self, value: T) -> Option<T> {
         self.value_box.replace(value)
     }
@@ -127,51 +151,95 @@ impl<T> BoxRef<T> {
     }
 }
 
-pub trait ValueBoxPointer<T> {
-    /// Get the reference to the underlying value without dropping it.
+pub trait ValueBoxPointer<T: Any> {
+    /// Get the reference to the underlying box without dropping it.
     fn to_ref(&self) -> Result<BoxRef<T>>;
 
     /// Take the value out of the box.
     fn take_value(&self) -> Result<T>;
 
     /// Evaluate a given function with a reference to the boxed value.
-    /// The lifetime of the reference can not outlive the closure.
-    fn with_ref<R, F>(&self, op: F) -> Result<R>
+    /// The the reference can not outlive the closure.
+    fn with_ref<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(&T) -> Result<R>,
+    {
+        self.to_ref()?.with_ref(op)
+    }
+
+    /// Evaluate a given function with a reference to the boxed value.
+    /// The the reference can not outlive the closure.
+    fn with_ref_ok<R: Any, F>(&self, op: F) -> Result<R>
     where
         F: FnOnce(&T) -> R,
     {
-        self.to_ref().map(|t| op(&t))
+        self.with_ref(|value| Ok(op(value)))
     }
 
-    /// Evaluate a given function with references to given boxed values.
+    /// Evaluate a given function with a mutable reference to the boxed value.
     /// The lifetime of the reference can not outlive the closure.
-    fn with_ref_ref<R, F, P>(&self, ptr: *mut ValueBox<P>, op: F) -> Result<R>
+    fn with_mut<R: Any, F>(&self, op: F) -> Result<R>
     where
-        F: FnOnce(&T, &P) -> R,
+        F: FnOnce(&mut T) -> Result<R>,
     {
-        self.to_ref().and_then(|t| ptr.to_ref().map(|p| op(&t, &p)))
+        self.to_ref()?.with_mut(op)
+    }
+
+    /// Evaluate a given function with a mutable reference to the boxed value.
+    /// The lifetime of the reference can not outlive the closure.
+    fn with_mut_ok<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(&mut T) -> R,
+    {
+        self.with_mut(|value| Ok(op(value)))
+    }
+
+    /// Evaluate a given function with a clone of the boxed value.
+    /// The boxed type `T` must implement [`Clone`].
+    fn with_clone<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(T) -> Result<R>,
+        T: Clone,
+    {
+        self.to_ref()?.with_ref(|value| op(value.clone()))
+    }
+
+    /// Evaluate a given function with a clone of the boxed value.
+    /// The boxed type `T` must implement [`Clone`].
+    fn with_clone_ok<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(T) -> R,
+        T: Clone,
+    {
+        self.with_clone(|value| Ok(op(value)))
     }
 
     /// Evaluate a given function with references to given boxed values.
     /// The lifetime of the reference can not outlive the closure.
-    fn with_ref_ref_ref<R, F, P1, P2>(
+    fn with_ref_ref<R: Any, F, P: Any>(&self, ptr: *mut ValueBox<P>, op: F) -> Result<R>
+    where
+        F: FnOnce(&T, &P) -> Result<R>,
+    {
+        self.with_ref(|t| ptr.with_ref(|p| op(t, p)))
+    }
+
+    /// Evaluate a given function with references to given boxed values.
+    /// The lifetime of the reference can not outlive the closure.
+    fn with_ref_ref_ref<R: Any, F, P1: Any, P2: Any>(
         &self,
         ptr1: *mut ValueBox<P1>,
         ptr2: *mut ValueBox<P2>,
         op: F,
     ) -> Result<R>
     where
-        F: FnOnce(&T, &P1, &P2) -> R,
+        F: FnOnce(&T, &P1, &P2) -> Result<R>,
     {
-        self.to_ref().and_then(|t| {
-            ptr1.to_ref()
-                .and_then(|p1| ptr2.to_ref().map(|p2| op(&t, &p1, &p2)))
-        })
+        self.with_ref(|t| ptr1.with_ref(|p1| ptr2.with_ref(|p2| op(t, p1, p2))))
     }
 
     /// Evaluate a given function with references to given boxed values.
     /// The lifetime of the reference can not outlive the closure.
-    fn with_ref_ref_ref_ref<R, F, P1, P2, P3>(
+    fn with_ref_ref_ref_ref<R: Any, F, P1: Any, P2: Any, P3: Any>(
         &self,
         ptr1: *mut ValueBox<P1>,
         ptr2: *mut ValueBox<P2>,
@@ -179,33 +247,11 @@ pub trait ValueBoxPointer<T> {
         op: F,
     ) -> Result<R>
     where
-        F: FnOnce(&T, &P1, &P2, &P3) -> R,
+        F: FnOnce(&T, &P1, &P2, &P3) -> Result<R>,
     {
-        self.to_ref().and_then(|t| {
-            ptr1.to_ref().and_then(|p1| {
-                ptr2.to_ref()
-                    .and_then(|p2| ptr3.to_ref().map(|p3| op(&t, &p1, &p2, &p3)))
-            })
+        self.with_ref(|t| {
+            ptr1.with_ref(|p1| ptr2.with_ref(|p2| ptr3.with_ref(|p3| op(&t, &p1, &p2, &p3))))
         })
-    }
-
-    /// Evaluate a given function with a mutable reference to the boxed value.
-    /// The lifetime of the reference can not outlive the closure.
-    fn with_mut<R, F>(&self, op: F) -> Result<R>
-    where
-        F: FnOnce(&mut T) -> R,
-    {
-        self.to_ref().map(|mut t| op(&mut t))
-    }
-
-    /// Evaluate a given function with a clone of the boxed value.
-    /// The boxed type `T` must implement [`Clone`].
-    fn with_clone<R, F>(&self, op: F) -> Result<R>
-    where
-        F: FnOnce(T) -> R,
-        T: Clone,
-    {
-        self.to_ref().map(|t| op(t.clone()))
     }
 
     /// Evaluate a given function with the value taken out of the box
@@ -237,158 +283,67 @@ pub trait ValueBoxPointer<T> {
             .or_log(std::ptr::null())
     }
 
-    #[deprecated(since = "0.1.0", note = "please use `take_value` instead")]
-    fn to_value(&self) -> Result<T> {
-        self.take_value()
-    }
-
     #[deprecated(since = "0.1.0", note = "please use `has_value` instead")]
     fn is_valid(&self) -> bool {
         self.has_value()
     }
 
-    #[deprecated(since = "0.1.0", note = "please use `to_ref()?.replace()` instead")]
-    fn mutate(&self, object: T) {
-        self.to_ref()
-            .and_then(|mut reference| Ok(reference.replace(object)))
-            .log();
-    }
-
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with_box<DefaultBlock, Block, Return>(&self, default: DefaultBlock, block: Block) -> Return
-    where
-        DefaultBlock: FnOnce() -> Return,
-        Block: FnOnce(&mut Box<ValueBox<T>>, DefaultBlock) -> Return,
-    {
-        if let Ok(mut reference) = self.to_ref() {
-            block(reference.value_box.deref_mut(), default)
-        } else {
-            default()
-        }
-    }
-
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with<DefaultBlock, Block, Return>(&self, default: DefaultBlock, block: Block) -> Return
-    where
-        DefaultBlock: FnOnce() -> Return,
-        Block: FnOnce(&mut T) -> Return,
-    {
-        self.to_ref()
-            .and_then(|mut reference| Ok(block(reference.deref_mut())))
-            .unwrap_or_else(|_| default())
-    }
-
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
+    #[deprecated(since = "0.1.0", note = "please use `with_ref` or `with_mut` instead")]
     fn with_not_null<Block>(&self, block: Block)
     where
         Block: FnOnce(&mut T),
     {
-        self.to_ref()
-            .and_then(|mut reference| Ok(block(reference.deref_mut())))
-            .log();
+        self.with_mut_ok(|value| block(value)).log();
     }
 
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with_not_null_return<Block, Return>(&self, default: Return, block: Block) -> Return
+    #[deprecated(since = "0.1.0", note = "please use `with_ref` or `with_mut` instead")]
+    fn with_not_null_return<Block, Return: Any>(&self, default: Return, block: Block) -> Return
     where
         Block: FnOnce(&mut T) -> Return,
     {
-        self.to_ref()
-            .map(|mut reference| block(reference.deref_mut()))
-            .or_log(default)
+        self.with_mut_ok(|value| block(value)).or_log(default)
     }
 
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with_value<DefaultBlock, Block, Return>(&self, default: DefaultBlock, block: Block) -> Return
-    where
-        DefaultBlock: FnOnce() -> Return,
-        Block: FnOnce(T) -> Return,
-        T: Clone,
-    {
-        self.to_ref()
-            .and_then(|reference| Ok(block(reference.clone())))
-            .unwrap_or_else(|_| default())
-    }
-
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with_not_null_value<Block>(&self, block: Block)
-    where
-        Block: FnOnce(T),
-        T: Clone,
-    {
-        self.to_ref()
-            .and_then(|reference| Ok(block(reference.clone())))
-            .log();
-    }
-
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with_not_null_value_return<Block, Return>(&self, default: Return, block: Block) -> Return
-    where
-        Block: FnOnce(T) -> Return,
-        T: Clone,
-    {
-        self.to_ref()
-            .and_then(|reference| Ok(block(reference.clone())))
-            .unwrap_or(default)
-    }
-
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with_not_null_value_mutate<Block>(&mut self, block: Block)
-    where
-        Block: FnOnce(T) -> T,
-    {
-        self.to_ref()
-            .map(|mut reference| {
-                reference
-                    .take_value()
-                    .map(block)
-                    .and_then(|value| reference.replace(value))
-            })
-            .log();
-    }
-
-    #[deprecated(since = "0.1.0", note = "please use `to_ref` instead")]
-    fn with_value_consumed<DefaultBlock, Block, Return>(
-        &mut self,
+    #[deprecated(since = "0.1.0", note = "please use `with_ref` or `with_mut` instead")]
+    fn with_value<DefaultBlock, Block, Return: Any>(
+        &self,
         default: DefaultBlock,
         block: Block,
     ) -> Return
     where
         DefaultBlock: FnOnce() -> Return,
-        Block: FnOnce(T, &mut Box<ValueBox<T>>) -> Return,
+        Block: FnOnce(T) -> Return,
+        T: Clone,
     {
-        self.to_ref()
-            .and_then(|mut reference| {
-                reference
-                    .take_value()
-                    .map(|value| block(value, reference.value_box.deref_mut()))
-                    .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()).into())
-            })
+        self.with_clone_ok(|value| block(value))
             .unwrap_or_else(|_| default())
     }
 
-    #[deprecated(since = "0.1.0", note = "please use `take_value` instead")]
-    fn with_not_null_value_consumed<Block>(&mut self, block: Block)
+    #[deprecated(since = "0.1.0", note = "please use `with_ref` or `with_mut` instead")]
+    fn with_not_null_value<Block>(&self, block: Block)
     where
         Block: FnOnce(T),
+        T: Clone,
     {
-        self.take_value().and_then(|value| Ok(block(value))).log();
+        self.with_ref_ok(|value| block(value.clone())).log();
     }
 
-    #[deprecated(since = "0.1.0", note = "please use `take_value` instead")]
-    fn with_not_null_value_consumed_return<Block, Return>(
-        &mut self,
+    #[deprecated(since = "0.1.0", note = "please use `with_ref` or `with_mut` instead")]
+    fn with_not_null_value_return<Block, Return: Any>(
+        &self,
         default: Return,
         block: Block,
     ) -> Return
     where
         Block: FnOnce(T) -> Return,
+        T: Clone,
     {
-        self.take_value().map(|value| block(value)).or_log(default)
+        self.with_ref_ok(|reference| block(reference.clone()))
+            .unwrap_or(default)
     }
 }
 
-impl<T> ValueBoxPointer<T> for *mut ValueBox<T> {
+impl<T: Any> ValueBoxPointer<T> for *mut ValueBox<T> {
     fn to_ref(&self) -> Result<BoxRef<T>> {
         if self.is_null() {
             return BoxerError::NullPointer(type_name::<T>().to_string()).into();
@@ -456,8 +411,6 @@ mod test {
     use std::fmt::Display;
     use std::rc::Rc;
 
-    use anyhow::anyhow;
-
     use crate::value_box::{ValueBox, ValueBoxPointer};
 
     use super::*;
@@ -474,53 +427,13 @@ mod test {
     impl Error for CustomError {}
 
     #[test]
-    pub fn value_box_as_ref() -> Result<()> {
-        let value_box = ValueBox::new(5);
-        let value_box_ptr = value_box.into_raw();
-
-        let reference = value_box_ptr.to_ref()?;
-
-        assert_eq!(reference.deref(), &5);
-        drop(reference);
-
-        let value = value_box_ptr
-            .to_ref()
-            .and_then(|_value| Err(anyhow!("New error").into()))
-            .unwrap_or(0);
-        assert_eq!(value, 0);
-
-        let value = value_box_ptr
-            .to_ref()
-            .and_then(|_value| Err((Box::new(CustomError {}) as Box<dyn Error>).into()))
-            .unwrap_or(0);
-        assert_eq!(value, 0);
-
-        Ok(())
-    }
-
-    #[test]
     pub fn value_box_as_ref_mut() -> Result<()> {
         let value_box = ValueBox::new(5);
         let value_box_ptr = value_box.into_raw();
-        let reference = value_box_ptr.to_ref()?.deref_mut().clone();
+        let reference = unsafe { *value_box_ptr.to_ref()?.as_ptr() };
         assert_eq!(reference, 5);
 
         Ok(())
-    }
-
-    #[test]
-    fn value_box_with_consumed() {
-        let value_box = ValueBox::new(5);
-
-        let mut value_box_ptr = value_box.into_raw();
-        assert_eq!(value_box_ptr.is_null(), false);
-        assert_eq!(value_box_ptr.has_value(), true);
-
-        let result = value_box_ptr.with_not_null_value_consumed_return(0, |value| value * 2);
-
-        assert_eq!(result, 10);
-        assert_eq!(value_box_ptr.is_null(), false);
-        assert_eq!(value_box_ptr.has_value(), false);
     }
 
     #[test]
@@ -561,90 +474,5 @@ mod test {
         ptr.release();
 
         assert_eq!(Rc::strong_count(&value), 1);
-    }
-
-    struct Child<'counter> {
-        value: i32,
-        counter: &'counter mut i32,
-    }
-
-    struct Parent<'counter> {
-        child: Child<'counter>,
-        counter: &'counter mut i32,
-    }
-
-    impl<'counter> Drop for Parent<'counter> {
-        fn drop(&mut self) {
-            println!("destroyed Parent");
-            *self.counter += 1;
-        }
-    }
-
-    impl<'counter> Drop for Child<'counter> {
-        fn drop(&mut self) {
-            println!("destroyed Child");
-            *self.counter += 1;
-        }
-    }
-
-    fn create_parent<'counter>(
-        parents_drop: &'counter mut i32,
-        children_drop: &'counter mut i32,
-    ) -> Parent<'counter> {
-        Parent {
-            child: Child {
-                value: 5,
-                counter: children_drop,
-            },
-            counter: parents_drop,
-        }
-    }
-
-    #[test]
-    fn drop_parent() {
-        let mut parents_drop = 0;
-        let mut children_drop = 0;
-
-        let parent = create_parent(&mut parents_drop, &mut children_drop);
-
-        drop(parent);
-
-        assert_eq!(parents_drop, 1);
-        assert_eq!(children_drop, 1);
-    }
-
-    fn put_parent_in_value_box_without_return(parent: Parent) {
-        put_parent_in_value_box_with_return(parent);
-    }
-
-    fn put_parent_in_value_box_with_return(parent: Parent) -> *mut ValueBox<Parent> {
-        ValueBox::new(parent).into_raw()
-    }
-
-    #[test]
-    fn leak_parent_by_putting_in_value_box_without_drop() {
-        let mut parents_drop = 0;
-        let mut children_drop = 0;
-
-        let parent = create_parent(&mut parents_drop, &mut children_drop);
-
-        put_parent_in_value_box_without_return(parent);
-
-        assert_eq!(parents_drop, 0);
-        assert_eq!(children_drop, 0);
-    }
-
-    #[test]
-    fn drop_parent_by_dropping_value_box() {
-        let mut parents_drop = 0;
-        let mut children_drop = 0;
-
-        let parent = create_parent(&mut parents_drop, &mut children_drop);
-
-        let parent_ptr = put_parent_in_value_box_with_return(parent);
-        parent_ptr.release();
-
-        assert_eq!(parents_drop, 1);
-        assert_eq!(children_drop, 1);
     }
 }

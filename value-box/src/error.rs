@@ -1,4 +1,5 @@
 use crate::ValueBox;
+use std::any::Any;
 use thiserror::Error;
 use user_error::{UserFacingError, UFE};
 
@@ -29,14 +30,14 @@ impl<T> From<BoxerError> for core::result::Result<T, BoxerError> {
 
 pub type Result<T> = core::result::Result<T, BoxerError>;
 
-pub trait ReturnBoxerResult<Return> {
+pub trait ReturnBoxerResult<Return: Any> {
     fn into_raw(self) -> *mut ValueBox<Return>;
     fn log(self);
     fn or_log(self, value: Return) -> Return;
     fn or_print(self, value: Return) -> Return;
 }
 
-impl<Return> ReturnBoxerResult<Return> for Result<Return> {
+impl<Return: Any> ReturnBoxerResult<Return> for Result<Return> {
     fn into_raw(self) -> *mut ValueBox<Return> {
         self.map(|value| ValueBox::new(value).into_raw())
             .or_log(std::ptr::null_mut())

@@ -8,19 +8,18 @@ pub fn library_object_create() -> *mut ValueBox<MyObject> {
 #[no_mangle]
 pub fn library_object_is_something(object: *mut ValueBox<MyObject>) -> bool {
     object
-        .to_ref()
-        .map(|object| object.is_something())
+        .with_ref_ok(|object| object.is_something())
         .unwrap_or(false)
 }
 
 #[no_mangle]
 pub fn library_object_by_ref(object: *mut ValueBox<MyObject>) {
-    object.to_ref().map(|object| object.by_ref()).log();
+    object.with_ref_ok(|object| object.by_ref()).log();
 }
 
 #[no_mangle]
 pub fn library_object_by_mut(object: *mut ValueBox<MyObject>) {
-    object.to_ref().map(|mut object| object.by_mut()).log();
+    object.with_mut_ok(|object| object.by_mut()).log();
 }
 
 #[no_mangle]
@@ -30,10 +29,7 @@ pub fn library_object_by_value(object: *mut ValueBox<MyObject>) {
 
 #[no_mangle]
 pub fn library_object_by_value_clone(object: *mut ValueBox<MyObject>) {
-    object
-        .to_ref()
-        .map(|object| object.clone().by_value())
-        .log();
+    object.with_clone_ok(|object| object.by_value()).log();
 }
 
 #[no_mangle]

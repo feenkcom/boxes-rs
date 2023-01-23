@@ -1,6 +1,6 @@
 [package]
 name = "value-box"
-version = "1.1.3"
+version = "2.0.0"
 authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
 repository = "https://github.com/feenkcom/boxes-rs/tree/main/value-box"
@@ -13,3 +13,10 @@ log = "0.4"
 thiserror = "1.0"
 user-error = "1.2"
 anyhow = { version = "1.0", optional = true }
+phlow = { version = "1", optional = true }
+
+[dev-dependencies]
+phlow-extensions = { version = "1" }
+
+[features]
+default = [ ]
