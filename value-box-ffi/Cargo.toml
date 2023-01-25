@@ -3,6 +3,10 @@ name = "value-box-ffi"
 version = "1.0.0"
 authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
+repository = "https://github.com/feenkcom/boxes-rs/tree/main/value-box-ffi"
+license = "MIT"
+keywords = ["ffi"]
+description = "Provides C-like api to family of value-box crates"
 
 [dependencies]
 value-box = { version = "2" }
