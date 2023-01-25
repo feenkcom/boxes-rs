@@ -97,7 +97,7 @@ impl<T: Any> BoxRef<T> {
             Container::PhlowValue(value) => match &value.container {
                 crate::PhlowValueContainer::Lazy(value) => {
                     let value = &value.value;
-                    op(value.as_ref().unwrap())
+                    op(value.as_ref_safe::<T>().unwrap())
                 }
                 crate::PhlowValueContainer::Object(object) => {
                     let value = object.value_ref::<T>().unwrap();
@@ -109,10 +109,17 @@ impl<T: Any> BoxRef<T> {
 
     pub fn with_mut<R>(&mut self, op: impl FnOnce(&mut T) -> Result<R>) -> Result<R> {
         match &mut self.value_box.container {
-            Container::Value(value) => op(value.as_mut().unwrap()),
+            Container::Value(value) => value
+                .as_mut()
+                .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
+                .and_then(|value| op(value)),
             #[cfg(feature = "phlow")]
             Container::PhlowValue(value) => match &mut value.container {
-                crate::PhlowValueContainer::Lazy(value) => op(value.value.as_mut().unwrap()),
+                crate::PhlowValueContainer::Lazy(value) => value
+                    .value
+                    .as_mut_safe::<T>()
+                    .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
+                    .and_then(|value| op(value)),
                 crate::PhlowValueContainer::Object(object) => {
                     let mut value = object.value_mut::<T>().unwrap();
                     op(&mut value)
@@ -185,7 +192,7 @@ pub trait ValueBoxPointer<T: Any> {
         self.to_ref()?.with_mut(op)
     }
 
-    /// Evaluate a given function with a mutable reference to the boxed value.
+    /// Evaluate a given function that can not fail with a mutable reference to the boxed value.
     /// The lifetime of the reference can not outlive the closure.
     fn with_mut_ok<R: Any, F>(&self, op: F) -> Result<R>
     where

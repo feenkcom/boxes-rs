@@ -2,35 +2,36 @@ use crate::value_box_container::ValueBoxContainer;
 use phlow::{AnyValue, PhlowObject};
 use std::any::Any;
 
-pub(crate) struct PhlowValue<T> {
-    pub(crate) container: PhlowValueContainer<T>,
+pub(crate) struct PhlowValue {
+    pub(crate) container: PhlowValueContainer,
 }
 
-pub(crate) enum PhlowValueContainer<T> {
-    Lazy(LazyPhlowObject<T>),
+pub(crate) enum PhlowValueContainer {
+    Lazy(LazyPhlowObject),
     Object(PhlowObject),
 }
 
-impl<T> PhlowValue<T> {
-    pub fn new(value: T, phlow_type_fn: fn() -> phlow::PhlowType) -> Self {
+impl PhlowValue {
+    pub fn new<T: Any>(value: T, phlow_type_fn: fn() -> phlow::PhlowType) -> Self {
         Self {
             container: PhlowValueContainer::Lazy(LazyPhlowObject {
-                value: Some(value),
+                value: AnyValue::object(value),
                 phlow_type_fn,
             }),
         }
     }
 }
 
-impl<T: Any> PhlowValue<T> {
+impl PhlowValue {
     pub(crate) fn phlow_object(&mut self) -> Option<PhlowObject> {
         let mut should_become_object = false;
         let phlow_object = match &mut self.container {
-            PhlowValueContainer::Lazy(value) => value.take_value().map(|existing_value| {
+            PhlowValueContainer::Lazy(value) => {
                 let phlow_type = (value.phlow_type_fn)();
+                let any_value = std::mem::replace(&mut value.value, AnyValue::None);
                 should_become_object = true;
-                PhlowObject::new(AnyValue::object(existing_value), phlow_type, vec![], None)
-            }),
+                Some(PhlowObject::new(any_value, phlow_type, vec![], None))
+            }
             PhlowValueContainer::Object(value) => Some(value.clone()),
         };
         if should_become_object {
@@ -40,7 +41,7 @@ impl<T: Any> PhlowValue<T> {
     }
 }
 
-impl<T: Any> ValueBoxContainer<T> for PhlowValue<T> {
+impl<T: Any> ValueBoxContainer<T> for PhlowValue {
     fn replace_value(&mut self, object: T) -> Option<T> {
         match &mut self.container {
             PhlowValueContainer::Lazy(value) => value.replace_value(object),
@@ -82,7 +83,9 @@ impl<T: Any> ValueBoxContainer<T> for PhlowValue<T> {
 
     fn has_value(&self) -> bool {
         match &self.container {
-            PhlowValueContainer::Lazy(value) => value.has_value(),
+            PhlowValueContainer::Lazy(value) => {
+                <LazyPhlowObject as ValueBoxContainer<T>>::has_value(value)
+            }
             PhlowValueContainer::Object(value) => {
                 <PhlowObject as ValueBoxContainer<T>>::has_value(value)
             }
@@ -90,19 +93,21 @@ impl<T: Any> ValueBoxContainer<T> for PhlowValue<T> {
     }
 }
 
-pub(crate) struct LazyPhlowObject<T> {
-    pub(crate) value: Option<T>,
+pub(crate) struct LazyPhlowObject {
+    pub(crate) value: AnyValue,
     // A function used to create a phlow type of the generic type T
     phlow_type_fn: fn() -> phlow::PhlowType,
 }
 
-impl<T: Any> ValueBoxContainer<T> for LazyPhlowObject<T> {
+impl<T: Any> ValueBoxContainer<T> for LazyPhlowObject {
     fn replace_value(&mut self, object: T) -> Option<T> {
-        self.value.replace_value(object)
+        let previous = std::mem::replace(&mut self.value, AnyValue::object(object));
+        previous.take_value()
     }
 
     fn take_value(&mut self) -> Option<T> {
-        self.value.take_value()
+        let previous = std::mem::replace(&mut self.value, AnyValue::None);
+        previous.take_value()
     }
 
     fn clone_value(&self) -> Option<T>
@@ -113,7 +118,7 @@ impl<T: Any> ValueBoxContainer<T> for LazyPhlowObject<T> {
     }
 
     fn as_ptr(&self) -> *const T {
-        self.value.as_ptr()
+        self.value.as_ptr() as *const T
     }
 
     fn has_value(&self) -> bool {

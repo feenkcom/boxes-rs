@@ -3,7 +3,7 @@ use std::any::Any;
 pub(crate) enum Container<T> {
     Value(Option<T>),
     #[cfg(feature = "phlow")]
-    PhlowValue(crate::PhlowValue<T>),
+    PhlowValue(crate::PhlowValue),
 }
 
 pub(crate) trait ValueBoxContainer<T: Any> {
@@ -82,7 +82,9 @@ impl<T: Any> ValueBoxContainer<T> for Container<T> {
         match self {
             Container::Value(value) => value.has_value(),
             #[cfg(feature = "phlow")]
-            Container::PhlowValue(value) => value.has_value(),
+            Container::PhlowValue(value) => {
+                <crate::PhlowValue as ValueBoxContainer<T>>::has_value(value)
+            }
         }
     }
 }

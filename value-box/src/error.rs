@@ -11,7 +11,7 @@ const REASON_PREFIX: &str = "\u{001b}[93;49;1m - \u{001b}[97;49;1m";
 pub enum BoxerError {
     #[error("The pointer to the box of type {0} is null")]
     NullPointer(String),
-    #[error("There is not value of type {0} in the box")]
+    #[error("There is no value of type {0} in the box")]
     NoValue(String),
     #[error("There was an error")]
     #[cfg(feature = "anyhow")]
