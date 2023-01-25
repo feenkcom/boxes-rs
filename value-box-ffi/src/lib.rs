@@ -59,7 +59,7 @@ pub fn boxer_value_box_to_phlow_object(
 #[no_mangle]
 #[cfg(not(feature = "phlow"))]
 pub fn boxer_value_box_to_phlow_object(
-    value_box: *mut value_box::ValueBox<std::ffi::c_void>,
+    _value_box: *mut value_box::ValueBox<std::ffi::c_void>,
 ) -> *mut std::ffi::c_void {
     std::ptr::null_mut()
 }
