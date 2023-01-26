@@ -2,62 +2,72 @@ use std::any::{type_name, Any};
 use std::fmt::{Debug, Formatter};
 use std::mem::ManuallyDrop;
 
-use crate::{BoxerError, Container, Result, ReturnBoxerResult, ValueBoxContainer};
+use crate::{BoxerError, Result, ReturnBoxerResult, ValueBoxContainer};
 
-#[repr(transparent)]
-pub struct ValueBox<T: Any> {
-    container: Container<T>,
+#[repr(C, u8)]
+pub enum ValueBox<T: Any> {
+    Value(Option<Box<T>>),
+    #[cfg(feature = "phlow")]
+    PhlowValue(Box<crate::PhlowValue>),
 }
 
 impl<T: Any> ValueBox<T> {
     pub fn new(object: T) -> Self {
-        Self {
-            container: Container::Value(Some(object)),
-        }
+        Self::Value(Some(Box::new(object)))
     }
 
     #[cfg(feature = "phlow")]
     pub fn new_phlow(object: T, phlow_type_fn: fn() -> phlow::PhlowType) -> Self {
-        Self {
-            container: Container::PhlowValue(crate::PhlowValue::new(object, phlow_type_fn)),
-        }
+        Self::PhlowValue(Box::new(crate::PhlowValue::new(object, phlow_type_fn)))
     }
 
     pub fn null() -> Self {
-        ValueBox {
-            container: Container::Value(None),
-        }
+        Self::Value(None)
     }
 
     pub fn has_value(&self) -> bool {
-        self.container.has_value()
+        match self {
+            Self::Value(value) => value.has_value(),
+            #[cfg(feature = "phlow")]
+            Self::PhlowValue(value) => {
+                <crate::PhlowValue as ValueBoxContainer<T>>::has_value(value)
+            }
+        }
     }
 
-    pub fn replace(&mut self, value: T) -> Option<T> {
-        self.container.replace_value(value)
+    pub fn replace_value(&mut self, object: T) -> Option<T> {
+        match self {
+            Self::Value(value) => value.replace_value(object),
+            #[cfg(feature = "phlow")]
+            Self::PhlowValue(value) => value.replace_value(object),
+        }
     }
 
     pub fn set_value(&mut self, object: T) {
-        self.container.replace_value(object);
+        self.replace_value(object);
     }
 
     pub fn clone_value(&self) -> Option<T>
     where
         T: Clone,
     {
-        self.container.clone_value()
+        match self {
+            Self::Value(value) => value.clone_value(),
+            #[cfg(feature = "phlow")]
+            Self::PhlowValue(value) => value.clone_value(),
+        }
     }
 
     pub fn take_value(&mut self) -> Option<T> {
-        self.container.take_value()
+        match self {
+            Self::Value(value) => value.take_value(),
+            #[cfg(feature = "phlow")]
+            Self::PhlowValue(value) => value.take_value(),
+        }
     }
 
     pub fn into_raw(self) -> *mut Self {
         into_raw(Box::new(self))
-    }
-
-    pub fn as_ptr(&self) -> *const T {
-        self.container.as_ptr()
     }
 }
 
@@ -67,9 +77,9 @@ impl<T: 'static> ValueBox<T> {
     /// Note: By definition `PhlowObject` owns the value, therefore
     /// internally we change the storage container for the value to `PhlowObject`.
     pub fn phlow_object(&mut self) -> Option<phlow::PhlowObject> {
-        match &mut self.container {
-            Container::Value(_) => None,
-            Container::PhlowValue(value) => value.phlow_object(),
+        match self {
+            Self::Value(_) => None,
+            Self::PhlowValue(value) => value.phlow_object(),
         }
     }
 }
@@ -91,15 +101,15 @@ pub struct BoxRef<T: Any> {
 
 impl<T: Any> BoxRef<T> {
     pub fn with_ref<R>(&self, op: impl FnOnce(&T) -> Result<R>) -> Result<R> {
-        match &self.value_box.container {
-            Container::Value(value) => op(value.as_ref().unwrap()),
+        match self.value_box.as_ref() {
+            ValueBox::Value(value) => op(value.as_ref().unwrap()),
             #[cfg(feature = "phlow")]
-            Container::PhlowValue(value) => match &value.container {
-                crate::PhlowValueContainer::Lazy(value) => {
+            ValueBox::PhlowValue(value) => match value.as_ref() {
+                crate::PhlowValue::Lazy(value) => {
                     let value = &value.value;
                     op(value.as_ref_safe::<T>().unwrap())
                 }
-                crate::PhlowValueContainer::Object(object) => {
+                crate::PhlowValue::Object(object) => {
                     let value = object.value_ref::<T>().unwrap();
                     op(&value)
                 }
@@ -108,19 +118,19 @@ impl<T: Any> BoxRef<T> {
     }
 
     pub fn with_mut<R>(&mut self, op: impl FnOnce(&mut T) -> Result<R>) -> Result<R> {
-        match &mut self.value_box.container {
-            Container::Value(value) => value
+        match self.value_box.as_mut() {
+            ValueBox::Value(value) => value
                 .as_mut()
                 .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
                 .and_then(|value| op(value)),
             #[cfg(feature = "phlow")]
-            Container::PhlowValue(value) => match &mut value.container {
-                crate::PhlowValueContainer::Lazy(value) => value
+            ValueBox::PhlowValue(value) => match value.as_mut() {
+                crate::PhlowValue::Lazy(value) => value
                     .value
                     .as_mut_safe::<T>()
                     .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
                     .and_then(|value| op(value)),
-                crate::PhlowValueContainer::Object(object) => {
+                crate::PhlowValue::Object(object) => {
                     let mut value = object.value_mut::<T>().unwrap();
                     op(&mut value)
                 }
@@ -146,11 +156,7 @@ impl<T: Any> Debug for BoxRef<T> {
 
 impl<T: Any> BoxRef<T> {
     pub fn replace(&mut self, value: T) -> Option<T> {
-        self.value_box.replace(value)
-    }
-
-    pub fn as_ptr(&self) -> *const T {
-        self.value_box.as_ptr()
+        self.value_box.replace_value(value)
     }
 
     pub fn take_value(&mut self) -> Option<T> {
@@ -296,12 +302,6 @@ pub trait ValueBoxPointer<T: Any> {
 
     fn has_value(&self) -> bool {
         self.to_ref().map(|_| true).unwrap_or(false)
-    }
-
-    fn get_ptr(&self) -> *const T {
-        self.to_ref()
-            .map(|reference| reference.as_ptr())
-            .or_log(std::ptr::null())
     }
 
     #[deprecated(since = "0.1.0", note = "please use `has_value` instead")]
@@ -451,8 +451,8 @@ mod test {
     pub fn value_box_as_ref_mut() -> Result<()> {
         let value_box = ValueBox::new(5);
         let value_box_ptr = value_box.into_raw();
-        let reference = unsafe { *value_box_ptr.to_ref()?.as_ptr() };
-        assert_eq!(reference, 5);
+        let value = value_box_ptr.with_ref_ok(|value| value.clone())?;
+        assert_eq!(value, 5);
 
         Ok(())
     }
