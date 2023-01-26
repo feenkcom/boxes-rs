@@ -174,6 +174,20 @@ pub trait ValueBoxPointer<T: Any> {
         self.to_ref()?.with_ref(op)
     }
 
+    /// Try to unbox the value and evaluate a given function with either Some
+    /// if the value was there or None if the pointer was a null pointer.
+    /// Returns an error if the value box wasn't a null pointer, but the boxed value
+    /// was already taken or of the wrong type.
+    fn with_option_ref<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(Option<&T>) -> Result<R>,
+    {
+        match self.to_ref() {
+            Ok(value) => value.with_ref(|value| op(Some(value))),
+            Err(_) => op(None),
+        }
+    }
+
     /// Evaluate a given function with a reference to the boxed value.
     /// The the reference can not outlive the closure.
     fn with_ref_ok<R: Any, F>(&self, op: F) -> Result<R>
