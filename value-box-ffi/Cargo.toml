@@ -1,6 +1,6 @@
 [package]
 name = "value-box-ffi"
-version = "1.0.1"
+version = "1.1.0"
 authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
 repository = "https://github.com/feenkcom/boxes-rs/tree/main/value-box-ffi"
@@ -16,10 +16,11 @@ string-box = { version = "1", optional = true }
 phlow = { version = "1", optional = true, features = [ "phlow-derive" ] }
 phlow-extensions = { version = "1", optional = true }
 crossbeam = { version = "0.8", optional = true }
+paste = { version = "1.0", optional = true }
 
 [features]
 phlow = [ "dep:phlow", "phlow-extensions", "value-box/phlow" ]
-array-box = [ "dep:array-box", "crossbeam" ]
+array-box = [ "dep:array-box", "paste","crossbeam" ]
 geometry-box = [ "dep:geometry-box" ]
 string-box = [ "dep:string-box" ]
 value-box = [ ]

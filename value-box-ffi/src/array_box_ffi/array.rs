@@ -1,7 +1,6 @@
 use std::any::Any;
 
 use array_box::ArrayBox;
-
 use value_box::{BoxerError, ReturnBoxerResult, ValueBox, ValueBoxPointer};
 
 pub trait ArrayBoxFFI<T>
@@ -142,5 +141,86 @@ where
         array_box
             .with_ref_ok(|array| array.at(index))
             .or_log(default)
+    }
+}
+
+#[macro_export]
+macro_rules! array_ffi {
+    ($ty:ident) => { array_ffi!($ty, $ty, Default::default()); };
+    ($ty:path, $name:ident) => { array_ffi!($ty, $name, Default::default()); };
+    ($ty:path, $name:ident, $default:expr) => {
+        paste::paste! {
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _create>]() -> *mut value_box::ValueBox<array_box::ArrayBox<$ty>> {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_create()
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _create_with>](
+                element: $ty,
+                amount: usize,
+            ) -> *mut value_box::ValueBox<array_box::ArrayBox<$ty>> {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_create_with(element, amount)
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _create_from_data>](
+                data: *mut $ty,
+                amount: usize,
+            ) -> *mut value_box::ValueBox<array_box::ArrayBox<$ty>> {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_create_from_data(data, amount)
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _copy_into>](
+                src: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
+                dst: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
+            ) {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_copy_into(src, dst);
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _copy_into_data>](
+                src: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
+                data: *mut $ty,
+                amount: usize,
+            ) {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_copy_into_data(src, data, amount);
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _get_length>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) -> usize {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_get_length(array)
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _get_capacity>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) -> usize {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_get_capacity(array)
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _get_data>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) -> *mut $ty {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_get_data(array)
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _at>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>, index: usize) -> $ty {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_at(array, index, $default)
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _at_put>](
+                array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
+                index: usize,
+                item: $ty,
+            ) {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_at_put(array, index, item);
+            }
+
+            #[no_mangle]
+            pub extern "C" fn [<boxer_array_ $name _drop>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) {
+                <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_drop(array);
+            }
+        }
     }
 }
