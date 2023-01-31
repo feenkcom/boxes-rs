@@ -1,4 +1,5 @@
 pub mod array;
+pub mod array_u8;
 
 use crate::array_ffi;
 
