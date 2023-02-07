@@ -31,18 +31,16 @@ impl<T> From<BoxerError> for core::result::Result<T, BoxerError> {
 pub type Result<T> = core::result::Result<T, BoxerError>;
 
 pub trait ReturnBoxerResult<Return: Any> {
-    fn into_raw(self) -> *mut ValueBox<Return>;
     fn log(self);
     fn or_log(self, value: Return) -> Return;
     fn or_print(self, value: Return) -> Return;
 }
 
-impl<Return: Any> ReturnBoxerResult<Return> for Result<Return> {
-    fn into_raw(self) -> *mut ValueBox<Return> {
-        self.map(|value| ValueBox::new(value).into_raw())
-            .or_log(std::ptr::null_mut())
-    }
+pub trait ValueBoxIntoRaw<Return: Any> {
+    fn into_raw(self) -> *mut ValueBox<Return>;
+}
 
+impl<Return: Any> ReturnBoxerResult<Return> for Result<Return> {
     fn log(self) {
         if let Err(error) = self {
             log_boxer_error(error);
@@ -72,40 +70,10 @@ impl<Return: Any> ReturnBoxerResult<Return> for Result<Return> {
     }
 }
 
-impl<Return: Any> ReturnBoxerResult<Return> for Result<ValueBox<Return>> {
+impl<Return: Any> ValueBoxIntoRaw<Return> for Result<ValueBox<Return>> {
     fn into_raw(self) -> *mut ValueBox<Return> {
         self.map(|value| value.into_raw())
             .or_log(std::ptr::null_mut())
-    }
-
-    fn log(self) {
-        if let Err(error) = self {
-            log_boxer_error(error);
-        }
-    }
-
-    fn or_log(self, value: Return) -> Return {
-        self.map(|mut value| value.take_value().unwrap())
-            .unwrap_or_else(|error| {
-                log_boxer_error(error);
-                value
-            })
-    }
-
-    fn or_print(self, value: Return) -> Return {
-        self.map_err(|error| {
-            let error: Box<dyn std::error::Error> = Box::new(error);
-            let user_facing_error: UserFacingError = error.into();
-            user_facing_error
-        })
-        .map(|mut value| value.take_value().unwrap())
-        .unwrap_or_else(|error| {
-            println!("{}", pretty_summary(error.summary().as_str()));
-            if let Some(reasons) = pretty_reasons(error.reasons()) {
-                println!("{}", reasons);
-            }
-            value
-        })
     }
 }
 

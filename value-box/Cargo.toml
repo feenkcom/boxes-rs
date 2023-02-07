@@ -1,6 +1,6 @@
 [package]
 name = "value-box"
-version = "2.2.4"
+version = "2.3.0"
 authors = ["feenk gmbh <contact@feenk.com>"]
 edition = "2021"
 repository = "https://github.com/feenkcom/boxes-rs/tree/main/value-box"

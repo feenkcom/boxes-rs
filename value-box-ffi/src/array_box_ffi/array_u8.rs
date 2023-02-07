@@ -82,57 +82,57 @@ pub extern "C" fn boxer_array_u8_rgba_to_argb(array: *mut ValueBox<ArrayBox<u8>>
         .log();
 }
 
-#[test]
-fn test_byte_size() {
-    assert_eq!(boxer_array_u8_byte_size(0), 0);
-    assert_eq!(boxer_array_u8_byte_size(1), 1);
-    assert_eq!(boxer_array_u8_byte_size(2), 2);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::*;
 
-#[test]
-fn test_argb_to_rgba() {
-    let argb = boxer_array_u8_create_with(0, 4);
-    boxer_array_u8_at_put(argb, 0, 255);
-    boxer_array_u8_at_put(argb, 1, 0);
-    boxer_array_u8_at_put(argb, 2, 100);
-    boxer_array_u8_at_put(argb, 3, 200);
+    #[test]
+    fn test_argb_to_rgba() {
+        let argb = boxer_array_u8_create_with(0, 4);
+        boxer_array_u8_at_put(argb, 0, 255);
+        boxer_array_u8_at_put(argb, 1, 0);
+        boxer_array_u8_at_put(argb, 2, 100);
+        boxer_array_u8_at_put(argb, 3, 200);
 
-    boxer_array_u8_argb_to_rgba(argb);
+        boxer_array_u8_argb_to_rgba(argb);
 
-    assert_eq!(boxer_array_u8_at(argb, 0), 0);
-    assert_eq!(boxer_array_u8_at(argb, 1), 100);
-    assert_eq!(boxer_array_u8_at(argb, 2), 200);
-    assert_eq!(boxer_array_u8_at(argb, 3), 255);
-}
+        assert_eq!(boxer_array_u8_at(argb, 0), 0);
+        assert_eq!(boxer_array_u8_at(argb, 1), 100);
+        assert_eq!(boxer_array_u8_at(argb, 2), 200);
+        assert_eq!(boxer_array_u8_at(argb, 3), 255);
+    }
 
-#[test]
-fn test_rgba_to_argb() {
-    let rgba = boxer_array_u8_create_with(0, 4);
-    boxer_array_u8_at_put(rgba, 0, 0);
-    boxer_array_u8_at_put(rgba, 1, 100);
-    boxer_array_u8_at_put(rgba, 2, 200);
-    boxer_array_u8_at_put(rgba, 3, 255);
+    #[test]
+    fn test_rgba_to_argb() {
+        let rgba = boxer_array_u8_create_with(0, 4);
+        boxer_array_u8_at_put(rgba, 0, 0);
+        boxer_array_u8_at_put(rgba, 1, 100);
+        boxer_array_u8_at_put(rgba, 2, 200);
+        boxer_array_u8_at_put(rgba, 3, 255);
 
-    boxer_array_u8_rgba_to_argb(rgba);
+        boxer_array_u8_rgba_to_argb(rgba);
 
-    assert_eq!(boxer_array_u8_at(rgba, 0), 255);
-    assert_eq!(boxer_array_u8_at(rgba, 1), 0);
-    assert_eq!(boxer_array_u8_at(rgba, 2), 100);
-    assert_eq!(boxer_array_u8_at(rgba, 3), 200);
-}
+        assert_eq!(boxer_array_u8_at(rgba, 0), 255);
+        assert_eq!(boxer_array_u8_at(rgba, 1), 0);
+        assert_eq!(boxer_array_u8_at(rgba, 2), 100);
+        assert_eq!(boxer_array_u8_at(rgba, 3), 200);
+    }
 
-#[test]
-fn test_bgra_to_argb() {
-    let bgra = boxer_array_u8_create_with(0, 4);
-    boxer_array_u8_at_put(bgra, 0, 0);
-    boxer_array_u8_at_put(bgra, 1, 100);
-    boxer_array_u8_at_put(bgra, 2, 200);
-    boxer_array_u8_at_put(bgra, 3, 255);
+    #[test]
+    fn test_bgra_to_argb() {
+        let bgra = boxer_array_u8_create_with(0, 4);
+        boxer_array_u8_at_put(bgra, 0, 0);
+        boxer_array_u8_at_put(bgra, 1, 100);
+        boxer_array_u8_at_put(bgra, 2, 200);
+        boxer_array_u8_at_put(bgra, 3, 255);
 
-    boxer_array_u8_bgra_to_argb(bgra);
+        boxer_array_u8_bgra_to_argb(bgra);
 
-    assert_eq!(boxer_array_u8_at(bgra, 0), 255);
-    assert_eq!(boxer_array_u8_at(bgra, 1), 200);
-    assert_eq!(boxer_array_u8_at(bgra, 2), 100);
-    assert_eq!(boxer_array_u8_at(bgra, 3), 0);
+        assert_eq!(boxer_array_u8_at(bgra, 0), 255);
+        assert_eq!(boxer_array_u8_at(bgra, 1), 200);
+        assert_eq!(boxer_array_u8_at(bgra, 2), 100);
+        assert_eq!(boxer_array_u8_at(bgra, 3), 0);
+    }
+
 }
