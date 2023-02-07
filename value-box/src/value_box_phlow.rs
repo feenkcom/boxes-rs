@@ -48,9 +48,7 @@ impl<T: Any> ValueBoxContainer<T> for PhlowValue {
     fn take_value(&mut self) -> Option<T> {
         match self {
             PhlowValue::Lazy(value) => value.take_value(),
-            PhlowValue::Object(value) => {
-                <PhlowObject as ValueBoxContainer<T>>::take_value(value)
-            }
+            PhlowValue::Object(value) => <PhlowObject as ValueBoxContainer<T>>::take_value(value),
         }
     }
 
@@ -60,20 +58,14 @@ impl<T: Any> ValueBoxContainer<T> for PhlowValue {
     {
         match self {
             PhlowValue::Lazy(value) => value.clone_value(),
-            PhlowValue::Object(value) => {
-                <PhlowObject as ValueBoxContainer<T>>::clone_value(value)
-            }
+            PhlowValue::Object(value) => <PhlowObject as ValueBoxContainer<T>>::clone_value(value),
         }
     }
 
     fn has_value(&self) -> bool {
         match self {
-            PhlowValue::Lazy(value) => {
-                <LazyPhlowObject as ValueBoxContainer<T>>::has_value(value)
-            }
-            PhlowValue::Object(value) => {
-                <PhlowObject as ValueBoxContainer<T>>::has_value(value)
-            }
+            PhlowValue::Lazy(value) => <LazyPhlowObject as ValueBoxContainer<T>>::has_value(value),
+            PhlowValue::Object(value) => <PhlowObject as ValueBoxContainer<T>>::has_value(value),
         }
     }
 }

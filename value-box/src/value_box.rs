@@ -429,7 +429,9 @@ mod test {
     #![allow(dead_code)]
 
     use std::error::Error;
+    use std::ffi::c_void;
     use std::fmt::Display;
+    use std::mem::size_of;
     use std::rc::Rc;
 
     use crate::value_box::{ValueBox, ValueBoxPointer};
@@ -446,6 +448,20 @@ mod test {
     }
 
     impl Error for CustomError {}
+
+    #[test]
+    pub fn value_box_size_in_memory() -> Result<()> {
+        // test the memory layout of the value box
+        assert_eq!(size_of::<ValueBox<c_void>>(), size_of::<ValueBox<u8>>());
+        assert_eq!(size_of::<ValueBox<(u64, u64)>>(), size_of::<ValueBox<u8>>());
+        assert_eq!(size_of::<ValueBox<()>>(), size_of::<ValueBox<u8>>());
+        assert_eq!(
+            size_of::<ValueBox<Box<dyn Error>>>(),
+            size_of::<ValueBox<u8>>()
+        );
+
+        Ok(())
+    }
 
     #[test]
     pub fn value_box_as_ref_mut() -> Result<()> {
