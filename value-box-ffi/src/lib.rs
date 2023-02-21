@@ -44,6 +44,10 @@ import_extensions!(CoreExtensions);
 pub fn boxer_value_box_to_phlow_object(
     value_box: *mut value_box::ValueBox<&'static (dyn std::any::Any + 'static)>,
 ) -> *mut std::ffi::c_void {
+    if value_box.is_null() {
+        return std::ptr::null_mut()
+    }
+
     let mut value_box = std::mem::ManuallyDrop::new(unsafe { Box::from_raw(value_box) });
     value_box
         .phlow_object()
