@@ -28,6 +28,18 @@ impl<T> From<BoxerError> for core::result::Result<T, BoxerError> {
     }
 }
 
+impl From<String> for BoxerError {
+    fn from(value: String) -> Self {
+        Self::AnyError(value.into())
+    }
+}
+
+impl From<&str> for BoxerError {
+    fn from(value: &str) -> Self {
+        Self::AnyError(value.into())
+    }
+}
+
 pub type Result<T> = core::result::Result<T, BoxerError>;
 
 pub trait ReturnBoxerResult<Return: Any> {
