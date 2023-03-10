@@ -84,16 +84,6 @@ impl<T: 'static> ValueBox<T> {
     }
 }
 
-impl<T: Any> Drop for ValueBox<T> {
-    fn drop(&mut self) {
-        trace!(
-            "Dropping {} of {}",
-            (if self.has_value() { "Some" } else { "None" }),
-            type_name::<T>()
-        );
-    }
-}
-
 #[repr(transparent)]
 pub struct BoxRef<T: Any> {
     value_box: ManuallyDrop<Box<ValueBox<T>>>,
