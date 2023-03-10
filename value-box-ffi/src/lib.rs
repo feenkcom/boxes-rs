@@ -41,7 +41,7 @@ import_extensions!(CoreExtensions);
 
 #[no_mangle]
 #[cfg(feature = "phlow")]
-pub fn boxer_value_box_to_phlow_object(
+pub extern "C" fn boxer_value_box_to_phlow_object(
     value_box: *mut value_box::ValueBox<&'static (dyn std::any::Any + 'static)>,
 ) -> *mut std::ffi::c_void {
     if value_box.is_null() {
@@ -59,7 +59,7 @@ pub fn boxer_value_box_to_phlow_object(
 
 #[no_mangle]
 #[cfg(not(feature = "phlow"))]
-pub fn boxer_value_box_to_phlow_object(
+pub extern "C" fn boxer_value_box_to_phlow_object(
     _value_box: *mut value_box::ValueBox<std::ffi::c_void>,
 ) -> *mut std::ffi::c_void {
     std::ptr::null_mut()
