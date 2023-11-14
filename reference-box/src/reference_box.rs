@@ -25,14 +25,14 @@ pub fn into_raw<T>(_box: Box<T>) -> *mut T {
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct ReferenceBox<T> {
+pub struct ReferenceBoxMut<T> {
     referenced: *mut T,
 }
 
-impl<T> ReferenceBox<T> {
+impl<T> ReferenceBoxMut<T> {
     pub fn new(_reference: &mut T) -> Self {
         let pointer: *mut T = unsafe { std::mem::transmute(_reference) };
-        ReferenceBox {
+        ReferenceBoxMut {
             referenced: pointer,
         }
     }
@@ -54,7 +54,7 @@ impl<T> ReferenceBox<T> {
     }
 }
 
-pub trait ReferenceBoxPointer<T> {
+pub trait ReferenceBoxMutPointer<T> {
     fn with<Block, Return>(&self, block: Block) -> Return
     where
         Block: FnOnce(&mut T) -> Return;
@@ -79,7 +79,7 @@ pub trait ReferenceBoxPointer<T> {
     fn drop(self);
 }
 
-impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
+impl<T> ReferenceBoxMutPointer<T> for *mut ReferenceBoxMut<T> {
     fn with<Block, Return>(&self, block: Block) -> Return
     where
         Block: FnOnce(&mut T) -> Return,
@@ -146,6 +146,117 @@ impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
     where
         DefaultBlock: FnOnce() -> Return,
         Block: FnOnce(&mut T) -> Return,
+    {
+        if self.is_null() {
+            return default();
+        }
+        self.with(block)
+    }
+
+    fn drop(self) {
+        let reference_box = unsafe { from_raw(self) };
+        std::mem::drop(reference_box);
+    }
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct ReferenceBox<T> {
+    referenced: *const T,
+}
+
+impl<T> ReferenceBox<T> {
+    pub fn new(_reference: &T) -> Self {
+        let pointer: *const T = unsafe { std::mem::transmute(_reference) };
+        Self {
+            referenced: pointer,
+        }
+    }
+
+    pub fn into_raw(self) -> *mut Self {
+        into_raw(Box::new(self))
+    }
+
+    pub fn boxed(&self) -> *const T {
+        self.referenced
+    }
+
+    pub fn as_ref(&self) -> &T {
+        unsafe { std::mem::transmute(self.referenced) }
+    }
+}
+
+pub trait ReferenceBoxPointer<T> {
+    fn with<Block, Return>(&self, block: Block) -> Return
+    where
+        Block: FnOnce(&T) -> Return;
+    fn with_not_null<Block>(&self, block: Block)
+    where
+        Block: FnOnce(&T);
+    fn with_not_null_return<Block, Return>(&self, default: Return, block: Block) -> Return
+    where
+        Block: FnOnce(&T) -> Return;
+    fn with_not_null_return_block<DefaultBlock, Block, Return>(
+        &self,
+        default: DefaultBlock,
+        block: Block,
+    ) -> Return
+    where
+        DefaultBlock: FnOnce() -> Return,
+        Block: FnOnce(&T) -> Return;
+    fn drop(self);
+}
+
+impl<T> ReferenceBoxPointer<T> for *mut ReferenceBox<T> {
+    fn with<Block, Return>(&self, block: Block) -> Return
+    where
+        Block: FnOnce(&T) -> Return,
+    {
+        assert_eq!(self.is_null(), false, "Pointer must not be null!");
+
+        let mut reference_box = unsafe { from_raw(*self) };
+        let referenced_object: &mut T = unsafe { std::mem::transmute(reference_box.referenced) };
+        let result: Return = block(referenced_object);
+
+        let referenced_object_pointer: *const T = unsafe { std::mem::transmute(referenced_object) };
+        reference_box.referenced = referenced_object_pointer;
+
+        let new_pointer = into_raw(reference_box);
+        assert_eq!(new_pointer, *self, "The pointer must not change");
+
+        result
+    }
+
+    fn with_not_null<Block>(&self, block: Block)
+    where
+        Block: FnOnce(&T),
+    {
+        if self.is_null() {
+            return;
+        }
+        self.with(|boxed_object| {
+            block(boxed_object);
+        });
+    }
+
+    fn with_not_null_return<Block, Return>(&self, default: Return, block: Block) -> Return
+    where
+        Block: FnOnce(&T) -> Return,
+    {
+        if self.is_null() {
+            return default;
+        }
+        self.with(block)
+    }
+
+    fn with_not_null_return_block<DefaultBlock, Block, Return>(
+        &self,
+        default: DefaultBlock,
+        block: Block,
+    ) -> Return
+    where
+        DefaultBlock: FnOnce() -> Return,
+        Block: FnOnce(&T) -> Return,
     {
         if self.is_null() {
             return default();
