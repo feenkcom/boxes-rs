@@ -89,6 +89,17 @@ impl<Return: Any> ValueBoxIntoRaw<Return> for Result<ValueBox<Return>> {
     }
 }
 
+impl<Return: Any> ValueBoxIntoRaw<Return> for Result<Option<ValueBox<Return>>> {
+    fn into_raw(self) -> *mut ValueBox<Return> {
+        self.map(|option| {
+            option
+                .map(|value| value.into_raw())
+                .unwrap_or_else(|| std::ptr::null_mut())
+        })
+        .or_log(std::ptr::null_mut())
+    }
+}
+
 fn log_boxer_error(error: BoxerError) {
     match &error {
         BoxerError::NullPointer(_) => warn_user_facing_error(to_user_facing_error(error)),
