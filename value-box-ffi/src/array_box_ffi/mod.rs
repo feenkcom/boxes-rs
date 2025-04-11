@@ -20,3 +20,6 @@ array_ffi!(std::ffi::c_uint, uint);
 
 array_ffi!(f32);
 array_ffi!(f64);
+
+#[cfg(feature = "array-box-string")]
+pub mod array_string;
