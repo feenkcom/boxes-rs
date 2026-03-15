@@ -1,12 +1,16 @@
 [package]
 name = "value-box"
 version = "2.3.3"
-authors = ["feenk gmbh <contact@feenk.com>"]
-edition = "2024"
-repository = "https://github.com/feenkcom/boxes-rs/tree/main/value-box"
-license = "MIT"
-keywords = ["ffi"]
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Allows developers to pass Rust-allocated structures over ffi."
+readme = "README.md"
+documentation = "https://docs.rs/value-box"
 
 [dependencies]
 log.workspace = true

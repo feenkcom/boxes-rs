@@ -1,12 +1,16 @@
 [package]
 name = "value-box-ffi"
-version = "1.2.0"
-authors = ["feenk gmbh <contact@feenk.com>"]
-edition = "2024"
-repository = "https://github.com/feenkcom/boxes-rs/tree/main/value-box-ffi"
-license = "MIT"
-keywords = ["ffi"]
+version = "2.0.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Provides C-like api to family of value-box crates"
+readme = "README.md"
+documentation = "https://docs.rs/value-box-ffi"
 
 [dependencies]
 value-box.workspace = true

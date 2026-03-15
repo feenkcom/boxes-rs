@@ -1,7 +1,10 @@
 use std::any::{type_name, Any};
+use std::ffi::c_void;
 use std::mem::size_of;
+use std::ptr::NonNull;
 
 use crate::{BoxerError, Result, ReturnBoxerResult};
+
 
 #[repr(transparent)]
 pub struct ValueBox<T: Any> {
@@ -40,6 +43,10 @@ impl<T: Any> ValueBox<T> {
         let ptr: *mut T = into_raw(Box::new(self.value));
         ptr.cast()
     }
+
+    pub fn into_erased_raw(self) -> *mut ErasedValueBox {
+        self.into_raw().cast()
+    }
 }
 
 impl<T: Any> AsRef<T> for ValueBox<T> {
@@ -54,9 +61,34 @@ impl<T: Any> AsMut<T> for ValueBox<T> {
     }
 }
 
+#[repr(C)]
+pub struct ErasedValueBox {
+    _private: [u8; 0],
+}
+
+pub trait ErasedValueBoxPointer {
+    /// Evaluate a given function with a non-null pointer to the boxed value.
+    /// The pointer must not outlive the closure.
+    fn with_ptr<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(NonNull<c_void>) -> Result<R>;
+
+    /// Evaluate a given function with a non-null pointer to the boxed value.
+    /// The pointer must not outlive the closure.
+    fn with_ptr_ok<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(NonNull<c_void>) -> R,
+    {
+        self.with_ptr(|pointer| Ok(op(pointer)))
+    }
+}
+
 pub trait ValueBoxPointer<T: Any> {
     /// Take the value out of the box.
     fn take_value(&self) -> Result<T>;
+
+    /// Erase the concrete value type while keeping the same raw pointer.
+    fn erase(self) -> *mut ErasedValueBox;
 
     /// Evaluate a given function with a reference to the boxed value.
     /// The reference can not outlive the closure.
@@ -245,6 +277,10 @@ impl<T: Any> ValueBoxPointer<T> for *mut ValueBox<T> {
         Ok(value_box.into_value())
     }
 
+    fn erase(self) -> *mut ErasedValueBox {
+        self.cast()
+    }
+
     fn with_ref<R: Any, F>(&self, op: F) -> Result<R>
     where
         F: FnOnce(&T) -> Result<R>,
@@ -299,6 +335,51 @@ impl<T: Any> ValueBoxPointer<T> for *mut ValueBox<T> {
     }
 }
 
+impl<T: Any> ErasedValueBoxPointer for *mut ValueBox<T> {
+    fn with_ptr<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(NonNull<c_void>) -> Result<R>,
+    {
+        if self.is_null() {
+            return BoxerError::NullPointer(type_name::<T>().to_string()).into();
+        }
+
+        let pointer = NonNull::new((*self).cast::<c_void>())
+            .expect("nonnull pointer must be available after null check");
+        op(pointer)
+    }
+}
+
+impl ErasedValueBoxPointer for *mut ErasedValueBox {
+    fn with_ptr<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(NonNull<c_void>) -> Result<R>,
+    {
+        if self.is_null() {
+            return BoxerError::NullPointer("erased value box".to_string()).into();
+        }
+
+        let pointer = NonNull::new((*self).cast::<c_void>())
+            .expect("nonnull pointer must be available after null check");
+        op(pointer)
+    }
+}
+
+impl ErasedValueBoxPointer for *const ErasedValueBox {
+    fn with_ptr<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(NonNull<c_void>) -> Result<R>,
+    {
+        if self.is_null() {
+            return BoxerError::NullPointer("erased value box".to_string()).into();
+        }
+
+        let pointer = NonNull::new((*self).cast_mut().cast::<c_void>())
+            .expect("nonnull pointer must be available after null check");
+        op(pointer)
+    }
+}
+
 /// Tell Rust to take back the control over memory
 /// This is dangerous! Rust takes control over the memory back
 ///
@@ -346,7 +427,7 @@ mod test {
     use std::mem::size_of;
     use std::rc::Rc;
 
-    use crate::value_box::{ValueBox, ValueBoxPointer};
+    use crate::value_box::{ErasedValueBox, ErasedValueBoxPointer, ValueBox, ValueBoxPointer};
 
     use super::*;
 
@@ -380,6 +461,58 @@ mod test {
         let value_box_ptr = value_box.into_raw();
         let value = value_box_ptr.with_ref_ok(|value| *value)?;
         assert_eq!(value, 5);
+        value_box_ptr.release();
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn value_box_as_non_null() -> Result<()> {
+        let value_box = ValueBox::new(5_i32);
+        let value_box_ptr = value_box.into_raw();
+        let value = value_box_ptr.with_ptr_ok(|pointer| unsafe {
+            *(pointer.as_ptr().cast::<i32>())
+        })?;
+        assert_eq!(value, 5);
+        value_box_ptr.release();
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn erased_value_box_as_non_null() -> Result<()> {
+        let value_box = ValueBox::new(7_i32);
+        let value_box_ptr = value_box.into_raw();
+        let erased_value_box_ptr = value_box_ptr.erase();
+        let value = erased_value_box_ptr.with_ptr_ok(|pointer| unsafe {
+            *(pointer.as_ptr().cast::<i32>())
+        })?;
+        assert_eq!(value, 7);
+        value_box_ptr.release();
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn value_box_into_erased_raw() -> Result<()> {
+        let erased_value_box_ptr = ValueBox::new(9_i32).into_erased_raw();
+        let value = erased_value_box_ptr.with_ptr_ok(|pointer| unsafe {
+            *(pointer.as_ptr().cast::<i32>())
+        })?;
+        assert_eq!(value, 9);
+        unsafe { from_raw::<i32>(erased_value_box_ptr.cast()) };
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn const_erased_value_box_as_non_null() -> Result<()> {
+        let value_box_ptr = ValueBox::new(11_i32).into_raw();
+        let erased_value_box_ptr = value_box_ptr.erase() as *const ErasedValueBox;
+        let value = erased_value_box_ptr.with_ptr_ok(|pointer| unsafe {
+            *(pointer.as_ptr().cast::<i32>())
+        })?;
+        assert_eq!(value, 11);
         value_box_ptr.release();
 
         Ok(())
