@@ -18,10 +18,10 @@ keywords = ["ffi"]
 categories = ["api-bindings"]
 
 [workspace.dependencies]
-value-box = { version = "2.3.3", path = "value-box" }
-array-box = { version = "2.0.0", path = "array-box" }
-geometry-box = { version = "2.0.0", path = "geometry-box" }
-string-box = { version = "2.0.0", path = "string-box" }
+value-box = { version = "3.0.0", path = "value-box" }
+array-box = { version = "3.0.0", path = "array-box" }
+geometry-box = { version = "3.0.0", path = "geometry-box" }
+string-box = { version = "3.0.0", path = "string-box" }
 anyhow = "1.0"
 crossbeam = "0.8"
 log = "0.4"
