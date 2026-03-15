@@ -94,7 +94,7 @@ impl<Return: Any> ValueBoxIntoRaw<Return> for Result<Option<ValueBox<Return>>> {
         self.map(|option| {
             option
                 .map(|value| value.into_raw())
-                .unwrap_or_else(|| std::ptr::null_mut())
+                .unwrap_or_else(std::ptr::null_mut)
         })
         .or_log(std::ptr::null_mut())
     }

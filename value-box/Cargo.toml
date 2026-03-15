@@ -2,21 +2,17 @@
 name = "value-box"
 version = "2.3.3"
 authors = ["feenk gmbh <contact@feenk.com>"]
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/feenkcom/boxes-rs/tree/main/value-box"
 license = "MIT"
 keywords = ["ffi"]
 description = "Allows developers to pass Rust-allocated structures over ffi."
 
 [dependencies]
-log = "0.4"
-thiserror = "1.0"
-user-error = "1.2"
-anyhow = { version = "1.0", optional = true }
-phlow = { version = "1", optional = true }
-
-[dev-dependencies]
-phlow-extensions = { version = "1" }
+log.workspace = true
+thiserror.workspace = true
+user-error.workspace = true
+anyhow = { workspace = true, optional = true }
 
 [features]
 default = [ ]

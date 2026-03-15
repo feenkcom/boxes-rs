@@ -18,6 +18,7 @@ pub extern "C" fn boxer_array_string_get_length(
 pub extern "C" fn boxer_array_string_at(
     array: *mut ValueBox<ArrayBox<StringBox>>,
     index: usize,
+    item: *mut ValueBox<StringBox>,
 ) -> *mut ValueBox<StringBox> {
     array
         .with_ref_ok(|array| value_box!(array.at(index)))

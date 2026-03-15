@@ -1,174 +1,68 @@
 use std::any::{type_name, Any};
-use std::fmt::{Debug, Formatter};
-use std::mem::ManuallyDrop;
+use std::mem::size_of;
 
-use crate::{BoxerError, Result, ReturnBoxerResult, ValueBoxContainer};
+use crate::{BoxerError, Result, ReturnBoxerResult};
 
-#[repr(C, u8)]
-pub enum ValueBox<T: Any> {
-    Value(Option<Box<T>>),
-    #[cfg(feature = "phlow")]
-    PhlowValue(Box<crate::PhlowValue>),
+#[repr(transparent)]
+pub struct ValueBox<T: Any> {
+    value: T,
 }
 
 impl<T: Any> ValueBox<T> {
     pub fn new(object: T) -> Self {
-        Self::Value(Some(Box::new(object)))
-    }
-
-    #[cfg(feature = "phlow")]
-    pub fn new_phlow(object: T, phlow_type_fn: fn() -> phlow::PhlowType) -> Self {
-        Self::PhlowValue(Box::new(crate::PhlowValue::new(object, phlow_type_fn)))
-    }
-
-    pub fn null() -> Self {
-        Self::Value(None)
+        Self { value: object }
     }
 
     pub fn has_value(&self) -> bool {
-        match self {
-            Self::Value(value) => value.has_value(),
-            #[cfg(feature = "phlow")]
-            Self::PhlowValue(value) => {
-                <crate::PhlowValue as ValueBoxContainer<T>>::has_value(value)
-            }
-        }
+        true
     }
 
-    pub fn replace_value(&mut self, object: T) -> Option<T> {
-        match self {
-            Self::Value(value) => value.replace_value(object),
-            #[cfg(feature = "phlow")]
-            Self::PhlowValue(value) => value.replace_value(object),
-        }
+    pub fn replace_value(&mut self, object: T) -> T {
+        std::mem::replace(&mut self.value, object)
     }
 
     pub fn set_value(&mut self, object: T) {
-        self.replace_value(object);
+        self.value = object;
     }
 
-    pub fn clone_value(&self) -> Option<T>
+    pub fn clone_value(&self) -> T
     where
         T: Clone,
     {
-        match self {
-            Self::Value(value) => value.clone_value(),
-            #[cfg(feature = "phlow")]
-            Self::PhlowValue(value) => value.clone_value(),
-        }
+        self.value.clone()
     }
 
-    pub fn take_value(&mut self) -> Option<T> {
-        match self {
-            Self::Value(value) => value.take_value(),
-            #[cfg(feature = "phlow")]
-            Self::PhlowValue(value) => value.take_value(),
-        }
+    pub fn into_value(self) -> T {
+        self.value
     }
 
     pub fn into_raw(self) -> *mut Self {
-        into_raw(Box::new(self))
+        let ptr: *mut T = into_raw(Box::new(self.value));
+        ptr.cast()
     }
 }
 
-impl<T: 'static> ValueBox<T> {
-    #[cfg(feature = "phlow")]
-    /// Try to get a phlow object from the lazily defined phlow value.
-    /// Note: By definition `PhlowObject` owns the value, therefore
-    /// internally we change the storage container for the value to `PhlowObject`.
-    pub fn phlow_object(&mut self) -> Option<phlow::PhlowObject> {
-        match self {
-            Self::Value(_) => None,
-            Self::PhlowValue(value) => value.phlow_object(),
-        }
+impl<T: Any> AsRef<T> for ValueBox<T> {
+    fn as_ref(&self) -> &T {
+        &self.value
     }
 }
 
-#[repr(transparent)]
-pub struct BoxRef<T: Any> {
-    value_box: ManuallyDrop<Box<ValueBox<T>>>,
-}
-
-impl<T: Any> BoxRef<T> {
-    pub fn with_ref<R>(&self, op: impl FnOnce(&T) -> Result<R>) -> Result<R> {
-        match self.value_box.as_ref() {
-            ValueBox::Value(value) => op(value.as_ref().unwrap()),
-            #[cfg(feature = "phlow")]
-            ValueBox::PhlowValue(value) => match value.as_ref() {
-                crate::PhlowValue::Lazy(value) => {
-                    let value = &value.value;
-                    op(value.as_ref_safe::<T>().unwrap())
-                }
-                crate::PhlowValue::Object(object) => {
-                    let value = object.value_ref::<T>().unwrap();
-                    op(&value)
-                }
-            },
-        }
-    }
-
-    pub fn with_mut<R>(&mut self, op: impl FnOnce(&mut T) -> Result<R>) -> Result<R> {
-        match self.value_box.as_mut() {
-            ValueBox::Value(value) => value
-                .as_mut()
-                .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
-                .and_then(|value| op(value)),
-            #[cfg(feature = "phlow")]
-            ValueBox::PhlowValue(value) => match value.as_mut() {
-                crate::PhlowValue::Lazy(value) => value
-                    .value
-                    .as_mut_safe::<T>()
-                    .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
-                    .and_then(|value| op(value)),
-                crate::PhlowValue::Object(object) => {
-                    let mut value = object.value_mut::<T>().unwrap();
-                    op(&mut value)
-                }
-            },
-        }
-    }
-}
-
-impl<T: Any> Debug for BoxRef<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BoxRef")
-            .field(
-                "value",
-                if self.value_box.has_value() {
-                    &"Some"
-                } else {
-                    &"None"
-                },
-            )
-            .finish()
-    }
-}
-
-impl<T: Any> BoxRef<T> {
-    pub fn replace(&mut self, value: T) -> Option<T> {
-        self.value_box.replace_value(value)
-    }
-
-    pub fn take_value(&mut self) -> Option<T> {
-        self.value_box.take_value()
+impl<T: Any> AsMut<T> for ValueBox<T> {
+    fn as_mut(&mut self) -> &mut T {
+        &mut self.value
     }
 }
 
 pub trait ValueBoxPointer<T: Any> {
-    /// Get the reference to the underlying box without dropping it.
-    fn to_ref(&self) -> Result<BoxRef<T>>;
-
     /// Take the value out of the box.
     fn take_value(&self) -> Result<T>;
 
     /// Evaluate a given function with a reference to the boxed value.
-    /// The the reference can not outlive the closure.
+    /// The reference can not outlive the closure.
     fn with_ref<R: Any, F>(&self, op: F) -> Result<R>
     where
-        F: FnOnce(&T) -> Result<R>,
-    {
-        self.to_ref()?.with_ref(op)
-    }
+        F: FnOnce(&T) -> Result<R>;
 
     /// Try to unbox the value and evaluate a given function with either Some
     /// if the value was there or None if the pointer was a null pointer.
@@ -178,9 +72,10 @@ pub trait ValueBoxPointer<T: Any> {
     where
         F: FnOnce(Option<&T>) -> Result<R>,
     {
-        match self.to_ref() {
-            Ok(value) => value.with_ref(|value| op(Some(value))),
-            Err(_) => op(None),
+        if self.has_value() {
+            self.with_ref(|value| op(Some(value)))
+        } else {
+            op(None)
         }
     }
 
@@ -197,10 +92,7 @@ pub trait ValueBoxPointer<T: Any> {
     /// The lifetime of the reference can not outlive the closure.
     fn with_mut<R: Any, F>(&self, op: F) -> Result<R>
     where
-        F: FnOnce(&mut T) -> Result<R>,
-    {
-        self.to_ref()?.with_mut(op)
-    }
+        F: FnOnce(&mut T) -> Result<R>;
 
     /// Evaluate a given function that can not fail with a mutable reference to the boxed value.
     /// The lifetime of the reference can not outlive the closure.
@@ -218,7 +110,7 @@ pub trait ValueBoxPointer<T: Any> {
         F: FnOnce(T) -> Result<R>,
         T: Clone,
     {
-        self.to_ref()?.with_ref(|value| op(value.clone()))
+        self.with_ref(|value| op(value.clone()))
     }
 
     /// Evaluate a given function with a clone of the boxed value.
@@ -267,7 +159,7 @@ pub trait ValueBoxPointer<T: Any> {
         F: FnOnce(&T, &P1, &P2, &P3) -> Result<R>,
     {
         self.with_ref(|t| {
-            ptr1.with_ref(|p1| ptr2.with_ref(|p2| ptr3.with_ref(|p3| op(&t, &p1, &p2, &p3))))
+            ptr1.with_ref(|p1| ptr2.with_ref(|p2| ptr3.with_ref(|p3| op(t, p1, p2, p3))))
         })
     }
 
@@ -276,22 +168,12 @@ pub trait ValueBoxPointer<T: Any> {
     /// must be of the same type as the box
     fn replace_value<F>(&self, op: F) -> Result<()>
     where
-        F: FnOnce(T) -> T,
-    {
-        self.to_ref().and_then(|mut t| {
-            t.take_value()
-                .ok_or_else(|| BoxerError::NoValue(type_name::<T>().to_string()))
-                .map(|previous_value| {
-                    let new_value = op(previous_value);
-                    t.replace(new_value);
-                })
-        })
-    }
+        F: FnOnce(T) -> T;
 
     fn release(self);
 
     fn has_value(&self) -> bool {
-        self.to_ref().map(|_| true).unwrap_or(false)
+        self.with_ref_ok(|_| ()).is_ok()
     }
 
     #[deprecated(since = "0.1.0", note = "please use `has_value` instead")]
@@ -326,8 +208,7 @@ pub trait ValueBoxPointer<T: Any> {
         Block: FnOnce(T) -> Return,
         T: Clone,
     {
-        self.with_clone_ok(|value| block(value))
-            .unwrap_or_else(|_| default())
+        self.with_clone_ok(block).unwrap_or_else(|_| default())
     }
 
     #[deprecated(since = "0.1.0", note = "please use `with_ref` or `with_mut` instead")]
@@ -355,29 +236,55 @@ pub trait ValueBoxPointer<T: Any> {
 }
 
 impl<T: Any> ValueBoxPointer<T> for *mut ValueBox<T> {
-    fn to_ref(&self) -> Result<BoxRef<T>> {
-        if self.is_null() {
-            return BoxerError::NullPointer(type_name::<T>().to_string()).into();
-        }
-        let value_box = ManuallyDrop::new(unsafe { from_raw(*self) });
-
-        if value_box.has_value() {
-            Ok(BoxRef { value_box })
-        } else {
-            BoxerError::NoValue(type_name::<T>().to_string()).into()
-        }
-    }
-
     fn take_value(&self) -> Result<T> {
         if self.is_null() {
             return BoxerError::NullPointer(type_name::<T>().to_string()).into();
         }
-        let mut value_box = ManuallyDrop::new(unsafe { from_raw(*self) });
-        value_box
-            .take_value()
-            .ok_or(BoxerError::NoValue(type_name::<T>().to_string()))
+
+        let value_box = unsafe { *from_raw(*self) };
+        Ok(value_box.into_value())
     }
 
+    fn with_ref<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(&T) -> Result<R>,
+    {
+        if self.is_null() {
+            return BoxerError::NullPointer(type_name::<T>().to_string()).into();
+        }
+
+        unsafe { op(&(**self).value) }
+    }
+
+    fn with_mut<R: Any, F>(&self, op: F) -> Result<R>
+    where
+        F: FnOnce(&mut T) -> Result<R>,
+    {
+        if self.is_null() {
+            return BoxerError::NullPointer(type_name::<T>().to_string()).into();
+        }
+
+        unsafe { op(&mut (**self).value) }
+    }
+
+    fn replace_value<F>(&self, op: F) -> Result<()>
+    where
+        F: FnOnce(T) -> T,
+    {
+        if self.is_null() {
+            return BoxerError::NullPointer(type_name::<T>().to_string()).into();
+        }
+
+        let value = unsafe { &mut (**self).value };
+        let guard = AbortOnPanic;
+        let previous_value = unsafe { std::ptr::read(value) };
+        let new_value = op(previous_value);
+        unsafe { std::ptr::write(value, new_value) };
+        std::mem::forget(guard);
+        Ok(())
+    }
+
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn release(self) {
         let result = if self.is_null() {
             BoxerError::NullPointer(type_name::<T>().to_string()).into()
@@ -386,31 +293,46 @@ impl<T: Any> ValueBoxPointer<T> for *mut ValueBox<T> {
         };
         result.log();
     }
+
+    fn has_value(&self) -> bool {
+        !self.is_null()
+    }
 }
 
 /// Tell Rust to take back the control over memory
-/// This is dangerous! Rust takes the control over the memory back
+/// This is dangerous! Rust takes control over the memory back
+///
+/// # Safety
+///
+/// `pointer` must come from [`Box::into_raw`] for the same `T`, must not be
+/// null, and must not have already been reclaimed.
 pub unsafe fn from_raw<T>(pointer: *mut T) -> Box<T> {
+    assert!(!pointer.is_null(), "from_raw(): Pointer must not be null!");
     assert_eq!(
-        pointer.is_null(),
-        false,
-        "from_raw(): Pointer must not be null!"
-    );
-    assert_eq!(
-        std::mem::size_of::<*mut T>(),
-        std::mem::size_of::<*mut std::ffi::c_void>(),
+        size_of::<*mut T>(),
+        size_of::<*mut std::ffi::c_void>(),
         "The pointer must be compatible with void*"
     );
-    Box::from_raw(pointer)
+    unsafe { Box::from_raw(pointer) }
 }
 
 pub fn into_raw<T>(_box: Box<T>) -> *mut T {
     assert_eq!(
-        std::mem::size_of::<*mut T>(),
-        std::mem::size_of::<*mut std::ffi::c_void>(),
+        size_of::<*mut T>(),
+        size_of::<*mut std::ffi::c_void>(),
         "The pointer must be compatible with void*"
     );
     Box::into_raw(_box)
+}
+
+struct AbortOnPanic;
+
+impl Drop for AbortOnPanic {
+    fn drop(&mut self) {
+        if std::thread::panicking() {
+            std::process::abort();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -420,7 +342,7 @@ mod test {
 
     use std::error::Error;
     use std::ffi::c_void;
-    use std::fmt::Display;
+    use std::fmt::{Display, Formatter};
     use std::mem::size_of;
     use std::rc::Rc;
 
@@ -441,13 +363,12 @@ mod test {
 
     #[test]
     pub fn value_box_size_in_memory() -> Result<()> {
-        // test the memory layout of the value box
-        assert_eq!(size_of::<ValueBox<c_void>>(), size_of::<ValueBox<u8>>());
-        assert_eq!(size_of::<ValueBox<(u64, u64)>>(), size_of::<ValueBox<u8>>());
-        assert_eq!(size_of::<ValueBox<()>>(), size_of::<ValueBox<u8>>());
+        assert_eq!(size_of::<ValueBox<c_void>>(), size_of::<c_void>());
+        assert_eq!(size_of::<ValueBox<(u64, u64)>>(), size_of::<(u64, u64)>());
+        assert_eq!(size_of::<ValueBox<()>>(), size_of::<()>());
         assert_eq!(
             size_of::<ValueBox<Box<dyn Error>>>(),
-            size_of::<ValueBox<u8>>()
+            size_of::<Box<dyn Error>>()
         );
 
         Ok(())
@@ -457,8 +378,9 @@ mod test {
     pub fn value_box_as_ref_mut() -> Result<()> {
         let value_box = ValueBox::new(5);
         let value_box_ptr = value_box.into_raw();
-        let value = value_box_ptr.with_ref_ok(|value| value.clone())?;
+        let value = value_box_ptr.with_ref_ok(|value| *value)?;
         assert_eq!(value, 5);
+        value_box_ptr.release();
 
         Ok(())
     }
@@ -468,11 +390,11 @@ mod test {
         let value_box = ValueBox::new(5);
 
         let value_box_ptr = value_box.into_raw();
-        assert_eq!(value_box_ptr.is_null(), false);
+        assert!(!value_box_ptr.is_null());
 
         let mut result = 0;
         value_box_ptr.with_not_null_value(|value| result = value * 2);
-        assert_eq!(value_box_ptr.is_null(), false);
+        assert!(!value_box_ptr.is_null());
         assert_eq!(result, 10);
 
         value_box_ptr.release();
@@ -483,10 +405,10 @@ mod test {
         let value_box = ValueBox::new(5);
 
         let value_box_ptr = value_box.into_raw();
-        assert_eq!(value_box_ptr.is_null(), false);
+        assert!(!value_box_ptr.is_null());
 
         let result = value_box_ptr.with_not_null_value_return(0, |value| value * 2);
-        assert_eq!(value_box_ptr.is_null(), false);
+        assert!(!value_box_ptr.is_null());
         assert_eq!(result, 10);
 
         value_box_ptr.release();

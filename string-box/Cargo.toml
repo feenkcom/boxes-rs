@@ -9,4 +9,4 @@ keywords = ["ffi"]
 description = "Create Rust string from UTF-8 string, byte string or wide string."
 
 [dependencies]
-widestring = "1.0"
+widestring.workspace = true

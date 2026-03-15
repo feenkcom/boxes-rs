@@ -4,14 +4,8 @@
 extern crate array_box;
 #[cfg(feature = "geometry-box")]
 extern crate geometry_box;
-#[cfg(feature = "phlow")]
-#[macro_use]
-extern crate phlow;
 #[cfg(feature = "string-box")]
 extern crate string_box;
-
-#[cfg(feature = "phlow")]
-use phlow_extensions::CoreExtensions;
 
 #[cfg(feature = "value-box")]
 pub use crate::value_box_ffi::*;
@@ -34,33 +28,4 @@ mod value_box_ffi;
 #[no_mangle]
 pub extern "C" fn boxer_test() -> bool {
     return true;
-}
-
-#[cfg(feature = "phlow")]
-import_extensions!(CoreExtensions);
-
-#[no_mangle]
-#[cfg(feature = "phlow")]
-pub fn boxer_value_box_to_phlow_object(
-    value_box: *mut value_box::ValueBox<&'static (dyn std::any::Any + 'static)>,
-) -> *mut std::ffi::c_void {
-    if value_box.is_null() {
-        return std::ptr::null_mut()
-    }
-
-    let mut value_box = std::mem::ManuallyDrop::new(unsafe { Box::from_raw(value_box) });
-    value_box
-        .phlow_object()
-        .map(|phlow_object| {
-            value_box::ValueBox::new(phlow_object).into_raw() as *mut std::ffi::c_void
-        })
-        .unwrap_or(std::ptr::null_mut())
-}
-
-#[no_mangle]
-#[cfg(not(feature = "phlow"))]
-pub fn boxer_value_box_to_phlow_object(
-    _value_box: *mut value_box::ValueBox<std::ffi::c_void>,
-) -> *mut std::ffi::c_void {
-    std::ptr::null_mut()
 }

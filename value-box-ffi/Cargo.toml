@@ -9,17 +9,14 @@ keywords = ["ffi"]
 description = "Provides C-like api to family of value-box crates"
 
 [dependencies]
-value-box = { version = "2" }
-array-box = { version = "1", optional = true }
-geometry-box = { version = "1", optional = true }
-string-box = { version = "1", optional = true }
-phlow = { version = "1", optional = true, features = [ "phlow-derive" ] }
-phlow-extensions = { version = "1", optional = true }
-crossbeam = { version = "0.8", optional = true }
-paste = { version = "1.0", optional = true }
+value-box.workspace = true
+array-box = { workspace = true, optional = true }
+geometry-box = { workspace = true, optional = true }
+string-box = { workspace = true, optional = true }
+crossbeam = { workspace = true, optional = true }
+paste = { workspace = true, optional = true }
 
 [features]
-phlow = [ "dep:phlow", "phlow-extensions", "value-box/phlow" ]
 array-box = [ "dep:array-box", "paste","crossbeam" ]
 array-box-string = [ "array-box", "string-box" ]
 geometry-box = [ "dep:geometry-box" ]

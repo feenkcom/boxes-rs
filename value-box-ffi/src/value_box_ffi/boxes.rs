@@ -10,6 +10,6 @@ pub extern "C" fn boxer_value_box_is_valid(ptr: *mut ValueBox<c_void>) -> bool {
 pub fn test_is_valid() {
     let ptr = ValueBox::new(42).into_raw();
 
-    let void_ptr: *mut ValueBox<c_void> = unsafe { std::mem::transmute(ptr) };
+    let void_ptr: *mut ValueBox<c_void> = ptr.cast();
     assert!(boxer_value_box_is_valid(void_ptr));
 }

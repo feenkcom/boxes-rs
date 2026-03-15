@@ -5,10 +5,22 @@ members = [
     "reference-box",
     "string-box",
     "value-box",
-    "value-box-extensions",
     "value-box-ffi"
 ]
 resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1.0"
+array-box = { version = "1.0.2", path = "array-box" }
+crossbeam = "0.8"
+geometry-box = { version = "1.0.0", path = "geometry-box" }
+log = "0.4"
+paste = "1.0"
+string-box = { version = "1.1.1", path = "string-box" }
+thiserror = "1.0"
+user-error = "1.2"
+value-box = { version = "2.3.3", path = "value-box" }
+widestring = "1.0"
 
 [profile.dev]
 opt-level = 0
