@@ -40,14 +40,14 @@ impl From<u128> for U128Box {
 
 #[test]
 pub fn uint128_max() {
-    println!("u128 max: {:?}", std::u128::MAX);
-    let number = U128Box::from(std::u128::MAX);
-    assert_eq!(number.get(), std::u128::MAX)
+    println!("u128 max: {:?}", u128::MAX);
+    let number = U128Box::from(u128::MAX);
+    assert_eq!(number.get(), u128::MAX)
 }
 
 #[test]
 pub fn uint128_min() {
-    println!("u128 min: {:?}", std::u128::MIN);
-    let number = U128Box::from(std::u128::MIN);
-    assert_eq!(number.get(), std::u128::MIN)
+    println!("u128 min: {:?}", u128::MIN);
+    let number = U128Box::from(u128::MIN);
+    assert_eq!(number.get(), u128::MIN)
 }

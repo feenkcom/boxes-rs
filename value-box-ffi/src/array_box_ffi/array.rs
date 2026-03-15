@@ -78,6 +78,7 @@ where
             .log();
     }
 
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     fn boxer_array_copy_into_data(
         source_array: *mut ValueBox<ArrayBox<T>>,
         destination_data: *mut T,
@@ -99,13 +100,14 @@ where
                 } else if destination_data.is_null() {
                     BoxerError::AnyError("The destination data must not be nil".into()).into()
                 } else {
-                    Ok(unsafe {
+                    unsafe {
                         std::ptr::copy_nonoverlapping::<T>(
                             source_array.data,
                             destination_data,
                             length,
                         )
-                    })
+                    };
+                    Ok(())
                 }
             })
             .log();
@@ -150,12 +152,12 @@ macro_rules! array_ffi {
     ($ty:path, $name:ident) => { array_ffi!($ty, $name, Default::default()); };
     ($ty:path, $name:ident, $default:expr) => {
         paste::paste! {
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _create>]() -> *mut value_box::ValueBox<array_box::ArrayBox<$ty>> {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_create()
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _create_with>](
                 element: $ty,
                 amount: usize,
@@ -163,7 +165,7 @@ macro_rules! array_ffi {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_create_with(element, amount)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _create_from_data>](
                 data: *mut $ty,
                 amount: usize,
@@ -171,7 +173,7 @@ macro_rules! array_ffi {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_create_from_data(data, amount)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _copy_into>](
                 src: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
                 dst: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
@@ -179,7 +181,7 @@ macro_rules! array_ffi {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_copy_into(src, dst);
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _copy_into_data>](
                 src: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
                 data: *mut $ty,
@@ -188,27 +190,27 @@ macro_rules! array_ffi {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_copy_into_data(src, data, amount);
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _get_length>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) -> usize {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_get_length(array)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _get_capacity>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) -> usize {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_get_capacity(array)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _get_data>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) -> *mut $ty {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_get_data(array)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _at>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>, index: usize) -> $ty {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_at(array, index, $default)
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _at_put>](
                 array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>,
                 index: usize,
@@ -217,7 +219,7 @@ macro_rules! array_ffi {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_at_put(array, index, item);
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [<boxer_array_ $name _drop>](array: *mut value_box::ValueBox<array_box::ArrayBox<$ty>>) {
                 <array_box::ArrayBox<$ty> as self::array::ArrayBoxFFI::<$ty>>::boxer_array_drop(array);
             }

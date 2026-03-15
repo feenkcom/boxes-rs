@@ -6,7 +6,7 @@ pub fn boxer_array_u8_convert_color_format<Block>(slice: &mut [u8], _converter: 
 where
     Block: Fn(u32) -> u32 + Send + Copy,
 {
-    if slice.len() % 4 == 0 {
+    if slice.len().is_multiple_of(4) {
         let slice_u32 = unsafe {
             std::slice::from_raw_parts_mut(slice.as_mut_ptr() as *mut u32, slice.len() / 4)
         };
@@ -55,29 +55,29 @@ fn rgba_to_argb(rgba: u32) -> u32 {
 }
 
 /// In-place convert argb to rgba
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn boxer_array_u8_argb_to_rgba(array: *mut ValueBox<ArrayBox<u8>>) {
     array
-        .with_mut_ok(|array| boxer_array_u8_convert_color_format(array.to_slice(), argb_to_rgba))
+        .with_mut_ok(|array| boxer_array_u8_convert_color_format(array.to_slice_mut(), argb_to_rgba))
         .log();
 }
 
 /// In-place convert bgra to argb
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn boxer_array_u8_bgra_to_argb(array: *mut ValueBox<ArrayBox<u8>>) {
     array
         .with_mut_ok(|array| {
-            boxer_array_u8_convert_color_format(array.to_slice(), bgra_to_argb);
+            boxer_array_u8_convert_color_format(array.to_slice_mut(), bgra_to_argb);
         })
         .log();
 }
 
 /// In-place convert rgba to argb
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn boxer_array_u8_rgba_to_argb(array: *mut ValueBox<ArrayBox<u8>>) {
     array
         .with_mut_ok(|array| {
-            boxer_array_u8_convert_color_format(array.to_slice(), rgba_to_argb);
+            boxer_array_u8_convert_color_format(array.to_slice_mut(), rgba_to_argb);
         })
         .log();
 }

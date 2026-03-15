@@ -2,7 +2,7 @@
 name = "string-box"
 version = "1.1.1"
 authors = ["feenk gmbh <contact@feenk.com>"]
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/feenkcom/boxes-rs/tree/main/string-box"
 license = "MIT"
 keywords = ["ffi"]

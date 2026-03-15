@@ -1,7 +1,7 @@
 use std::os::raw::c_void;
 use value_box::{ValueBox, ValueBoxPointer};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn boxer_value_box_is_valid(ptr: *mut ValueBox<c_void>) -> bool {
     ptr.has_value()
 }

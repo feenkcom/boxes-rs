@@ -50,8 +50,12 @@ impl StringBox {
     }
 
     /// Create from a wide string by copying the data
+    ///
+    /// # Safety
+    ///
+    /// `data` must be valid for reads of `length` `u32` values.
     pub unsafe fn from_wide_string_data(data: *const u32, length: usize) -> Self {
-        let wide_string = slice::from_raw_parts(data, length).to_vec();
+        let wide_string = unsafe { slice::from_raw_parts(data, length) }.to_vec();
         Self::from_wide_string(wide_string)
     }
 
@@ -66,8 +70,12 @@ impl StringBox {
     }
 
     /// Create from a wide string by copying the data
+    ///
+    /// # Safety
+    ///
+    /// `data` must be valid for reads of `length` `u8` values.
     pub unsafe fn from_byte_string_data(data: *const u8, length: usize) -> Self {
-        let byte_string = slice::from_raw_parts(data, length).to_vec();
+        let byte_string = unsafe { slice::from_raw_parts(data, length) }.to_vec();
         Self::from_byte_string(byte_string)
     }
 
@@ -82,11 +90,15 @@ impl StringBox {
 
     /// data must be nul terminated
     /// length does not take nul into account
+    ///
+    /// # Safety
+    ///
+    /// `data` must be valid for reads of `length + 1` bytes and end with a nul byte.
     pub unsafe fn from_utf8_string_data(data: *const u8, length: usize) -> Self {
         // we are not using CString::from_raw because it retakes the ownership
         // and will drop the data. Instead we create a borrowed CStr which
         // we later copy into a String
-        Self::from_utf8_string(slice::from_raw_parts(data, length + 1))
+        Self::from_utf8_string(unsafe { slice::from_raw_parts(data, length + 1) })
     }
 
     /// data must be nul terminated
@@ -116,13 +128,13 @@ impl StringBox {
         self.string.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.string.is_empty()
+    }
+
     /// Returns the amount of [`char`]
     pub fn char_count(&self) -> usize {
         self.string.chars().count()
-    }
-
-    pub fn to_string(&self) -> String {
-        self.string.clone()
     }
 
     pub fn as_str(&self) -> &str {
@@ -138,55 +150,61 @@ impl StringBox {
     }
 
     pub fn char_index_to_byte_range(&self, index: usize) -> Range<usize> {
-        let mut current_char_index = 0 as usize;
-        let mut previous_byte_offset = 0 as usize;
+        let mut previous_byte_offset = 0_usize;
 
-        for (current_byte_offset, _) in self.string.char_indices() {
+        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate() {
             if current_char_index == (index + 1) {
                 return previous_byte_offset..current_byte_offset;
             }
-            current_char_index = current_char_index + 1;
             previous_byte_offset = current_byte_offset;
         }
         previous_byte_offset..self.len()
     }
 
     pub fn char_index_to_utf16_range(&self, index: usize) -> Range<usize> {
-        let mut current_char_index = 0 as usize;
-        let mut previous_byte_offset = 0 as usize;
-        let mut previous_utf16_offset = 0 as usize;
+        let mut previous_byte_offset = 0_usize;
+        let mut previous_utf16_offset = 0_usize;
 
-        for (current_byte_offset, _) in self.string.char_indices() {
-            let delta = ((current_byte_offset - previous_byte_offset) + 1) / 2;
+        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate() {
+            let delta = (current_byte_offset - previous_byte_offset).div_ceil(2);
             if current_char_index == (index + 1) {
                 return previous_utf16_offset..(previous_utf16_offset + delta);
             }
-            current_char_index = current_char_index + 1;
             previous_byte_offset = current_byte_offset;
-            previous_utf16_offset = previous_utf16_offset + delta;
+            previous_utf16_offset += delta;
         }
-        let delta = ((self.len() - previous_byte_offset) + 1) / 2;
+        let delta = (self.len() - previous_byte_offset).div_ceil(2);
         previous_utf16_offset..(previous_utf16_offset + delta)
     }
 
     pub fn utf16_position_to_char_index(&self, index: usize) -> usize {
-        let mut current_char_index = 0 as usize;
-        let mut previous_byte_offset = 0 as usize;
-        let mut previous_utf16_offset = 0 as usize;
+        let mut previous_byte_offset = 0_usize;
+        let mut previous_utf16_offset = 0_usize;
 
-        for (current_byte_offset, _) in self.string.char_indices() {
-            let delta = ((current_byte_offset - previous_byte_offset) + 1) / 2;
+        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate() {
+            let delta = (current_byte_offset - previous_byte_offset).div_ceil(2);
             let current_utf16_offset = previous_utf16_offset + delta;
 
             if current_utf16_offset >= index {
                 return current_char_index;
             }
 
-            current_char_index = current_char_index + 1;
             previous_byte_offset = current_byte_offset;
             previous_utf16_offset = current_utf16_offset;
         }
-        current_char_index
+        self.string.chars().count()
+    }
+}
+
+impl Default for StringBox {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for StringBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.string)
     }
 }
 

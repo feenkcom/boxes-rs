@@ -62,11 +62,18 @@ impl<T> ArrayBox<T> {
         self.set_vector(vector);
     }
 
-    pub fn to_slice(&self) -> &mut [T] {
+    pub fn to_slice(&self) -> &[T] {
+        unsafe { std::slice::from_raw_parts(self.data, self.length) }
+    }
+
+    pub fn to_slice_mut(&mut self) -> &mut [T] {
         unsafe { std::slice::from_raw_parts_mut(self.data, self.length) }
     }
 
-    pub fn copy_into(&self, another_array: &mut ArrayBox<T>) {
+    pub fn copy_into(&self, another_array: &mut ArrayBox<T>)
+    where
+        T: Copy,
+    {
         assert!(
             self.length <= another_array.length,
             "The source does not fit into destination"
@@ -100,7 +107,7 @@ impl<T> ArrayBox<T> {
     pub fn at_put(&mut self, index: usize, object: T) {
         assert!(index < self.length, "Index must be less than array length");
 
-        let slice = self.to_slice();
+        let slice = self.to_slice_mut();
         slice[index] = object;
     }
 
@@ -170,7 +177,7 @@ mod test {
         let array = ArrayBox::<u8>::default();
         assert_eq!(array.capacity, 0);
         assert_eq!(array.length, 0);
-        assert_eq!(array.data.is_null(), false);
+        assert!(!array.data.is_null());
     }
 
     #[test]
@@ -178,6 +185,6 @@ mod test {
         let array = ArrayBox::<u8>::from_vector(vec![0, 1, 2, 3, 4]);
         assert_eq!(array.capacity, 5);
         assert_eq!(array.length, 5);
-        assert_eq!(array.data.is_null(), false);
+        assert!(!array.data.is_null());
     }
 }

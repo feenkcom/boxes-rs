@@ -25,7 +25,7 @@ mod string_box_ffi;
 #[cfg(feature = "value-box")]
 mod value_box_ffi;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn boxer_test() -> bool {
-    return true;
+    true
 }
