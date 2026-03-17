@@ -30,7 +30,7 @@ pub extern "C" fn boxer_array_string_at_put(
     item: OwnedPtr<StringBox>,
 ) {
     array
-        .with_mut(|array| item.take_value().map(|item| array.at_put(index, item)))
+        .with_mut(|array| item.with_value_ok(|item| array.at_put(index, item)))
         .log();
 }
 

@@ -35,7 +35,21 @@ impl<T: Any> OwnedPtr<T> {
         self.ptr.is_null()
     }
 
-    pub fn take_value(self) -> Result<T> {
+    pub fn with_value<R: Any, F>(self, op: F) -> Result<R>
+    where
+        F: FnOnce(T) -> Result<R>,
+    {
+        self.into_value().and_then(op)
+    }
+
+    pub fn with_value_ok<R: Any, F>(self, op: F) -> Result<R>
+    where
+        F: FnOnce(T) -> R,
+    {
+        self.with_value(|value| Ok(op(value)))
+    }
+
+    fn into_value(self) -> Result<T> {
         let pointer = self.into_ptr();
         if pointer.is_null() {
             return BoxerError::NullPointer(type_name::<T>().to_string()).into();
@@ -43,6 +57,7 @@ impl<T: Any> OwnedPtr<T> {
 
         Ok(unsafe { *from_raw(pointer) })
     }
+
     fn into_ptr(self) -> *mut T {
         let this = ManuallyDrop::new(self);
         this.ptr

@@ -24,7 +24,7 @@ pub fn library_object_by_mut(mut object: BorrowedPtr<MyObject>) {
 
 #[unsafe(no_mangle)]
 pub fn library_object_by_value(object: OwnedPtr<MyObject>) {
-    object.take_value().map(|object| object.by_value()).log();
+    object.with_value_ok(|object| object.by_value()).log();
 }
 
 #[unsafe(no_mangle)]

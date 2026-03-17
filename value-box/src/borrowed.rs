@@ -11,6 +11,18 @@ pub struct BorrowedPtr<T: Any> {
 }
 
 impl<T: Any> BorrowedPtr<T> {
+    pub fn from_ref(value: &T) -> Self {
+        Self {
+            ptr: (value as *const T).cast_mut(),
+        }
+    }
+
+    pub fn from_mut(value: &mut T) -> Self {
+        Self {
+            ptr: value as *mut T,
+        }
+    }
+
     /// # Safety
     ///
     /// `ptr` must be either null or point to a valid `T` for the duration of

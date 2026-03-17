@@ -31,6 +31,24 @@ fn value_box_as_ref_mut() -> Result<()> {
 }
 
 #[test]
+fn borrowed_ptr_from_ref() -> Result<()> {
+    let value = 5_i32;
+    let value_box_ptr = BorrowedPtr::from_ref(&value);
+    let borrowed = value_box_ptr.with_ref_ok(|value| *value)?;
+    assert_eq!(borrowed, 5);
+    Ok(())
+}
+
+#[test]
+fn borrowed_ptr_from_mut() -> Result<()> {
+    let mut value = 5_i32;
+    let mut value_box_ptr = BorrowedPtr::from_mut(&mut value);
+    value_box_ptr.with_mut_ok(|value| *value = 7)?;
+    assert_eq!(value, 7);
+    Ok(())
+}
+
+#[test]
 fn value_box_as_non_null() -> Result<()> {
     let raw = Box::into_raw(Box::new(5_i32));
     let value_box_ptr = unsafe { BorrowedPtr::from_raw(raw) };
@@ -112,13 +130,34 @@ fn value_box_drop() {
 }
 
 #[test]
-fn owned_ptr_take_value() -> Result<()> {
+fn owned_ptr_with_value_ok() -> Result<()> {
     let value = Rc::new(42);
     let owned = OwnedPtr::new(value.clone());
 
-    let extracted = owned.take_value()?;
-    assert_eq!(Rc::strong_count(&value), 2);
-    drop(extracted);
+    let strong_count = owned.with_value_ok(|extracted| {
+        let count = Rc::strong_count(&extracted);
+        drop(extracted);
+        count
+    })?;
+
+    assert_eq!(strong_count, 2);
+    assert_eq!(Rc::strong_count(&value), 1);
+
+    Ok(())
+}
+
+#[test]
+fn owned_ptr_with_value() -> Result<()> {
+    let value = Rc::new(42);
+    let owned = OwnedPtr::new(value.clone());
+
+    let strong_count = owned.with_value_ok(|extracted| {
+        let count = Rc::strong_count(&extracted);
+        drop(extracted);
+        count
+    })?;
+
+    assert_eq!(strong_count, 2);
     assert_eq!(Rc::strong_count(&value), 1);
 
     Ok(())
