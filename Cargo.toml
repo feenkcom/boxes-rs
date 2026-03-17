@@ -19,7 +19,7 @@ categories = ["api-bindings"]
 
 [workspace.dependencies]
 value-box = { version = "4.0.0", path = "value-box" }
-array-box = { version = "3.0.0", path = "array-box" }
+array-box = { version = "4.0.0", path = "array-box" }
 geometry-box = { version = "3.0.0", path = "geometry-box" }
 string-box = { version = "3.0.0", path = "string-box" }
 anyhow = "1.0"
