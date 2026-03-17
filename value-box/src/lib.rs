@@ -1,16 +1,12 @@
 #[macro_use]
 extern crate log;
 
+pub use borrowed::*;
 pub use error::*;
+pub use owned::*;
+pub use erased::*;
 
-pub use self::value_box::*;
-
+mod borrowed;
+mod erased;
 mod error;
-mod value_box;
-
-#[macro_export]
-macro_rules! value_box {
-    ($var:expr) => {{
-        value_box::ValueBox::new($var)
-    }};
-}
+mod owned;

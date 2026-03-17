@@ -1,35 +1,35 @@
 use array_box::ArrayBox;
 use string_box::StringBox;
-use value_box::{value_box, ReturnBoxerResult, ValueBox, ValueBoxIntoRaw, ValueBoxPointer};
+use value_box::{BorrowedPtr, OwnedPtr, ReturnBoxerResult};
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_array_string_create() -> *mut ValueBox<ArrayBox<StringBox>> {
-    value_box!(ArrayBox::new()).into_raw()
+pub extern "C" fn boxer_array_string_create() -> OwnedPtr<ArrayBox<StringBox>> {
+    OwnedPtr::new(ArrayBox::new())
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn boxer_array_string_get_length(
-    array: *mut ValueBox<ArrayBox<StringBox>>,
+    array: BorrowedPtr<ArrayBox<StringBox>>,
 ) -> usize {
     array.with_ref_ok(|array| array.length).or_log(0)
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn boxer_array_string_at(
-    array: *mut ValueBox<ArrayBox<StringBox>>,
+    array: BorrowedPtr<ArrayBox<StringBox>>,
     index: usize,
-    _item: *mut ValueBox<StringBox>,
-) -> *mut ValueBox<StringBox> {
+    _item: BorrowedPtr<StringBox>,
+) -> OwnedPtr<StringBox> {
     array
-        .with_ref_ok(|array| value_box!(array.at(index)))
-        .into_raw()
+        .with_ref_ok(|array| OwnedPtr::new(array.at(index)))
+        .or_log(OwnedPtr::null())
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn boxer_array_string_at_put(
-    array: *mut ValueBox<ArrayBox<StringBox>>,
+    mut array: BorrowedPtr<ArrayBox<StringBox>>,
     index: usize,
-    item: *mut ValueBox<StringBox>,
+    item: OwnedPtr<StringBox>,
 ) {
     array
         .with_mut(|array| item.take_value().map(|item| array.at_put(index, item)))
@@ -37,6 +37,6 @@ pub extern "C" fn boxer_array_string_at_put(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_array_string_drop(array: *mut ValueBox<ArrayBox<StringBox>>) {
-    array.release();
+pub extern "C" fn boxer_array_string_drop(array: OwnedPtr<ArrayBox<StringBox>>) {
+    drop(array);
 }

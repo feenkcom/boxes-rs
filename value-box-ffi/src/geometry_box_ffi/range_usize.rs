@@ -1,33 +1,33 @@
 use std::ops::Range;
 
-use value_box::{ReturnBoxerResult, ValueBox, ValueBoxPointer};
+use value_box::{BorrowedPtr, OwnedPtr, ReturnBoxerResult};
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_range_usize_create() -> *mut ValueBox<Range<usize>> {
-    ValueBox::new(0..0).into_raw()
+pub extern "C" fn boxer_range_usize_create() -> OwnedPtr<Range<usize>> {
+    OwnedPtr::new(0..0)
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_range_usize_drop(range: *mut ValueBox<Range<usize>>) {
-    range.release();
+pub extern "C" fn boxer_range_usize_drop(range: OwnedPtr<Range<usize>>) {
+    drop(range);
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_range_usize_get_start(range: *mut ValueBox<Range<usize>>) -> usize {
+pub extern "C" fn boxer_range_usize_get_start(range: BorrowedPtr<Range<usize>>) -> usize {
     range.with_ref_ok(|range| range.start).or_log(0)
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_range_usize_set_start(range: *mut ValueBox<Range<usize>>, start: usize) {
+pub extern "C" fn boxer_range_usize_set_start(mut range: BorrowedPtr<Range<usize>>, start: usize) {
     range.with_mut_ok(|range| range.start = start).log();
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_range_usize_get_end(range: *mut ValueBox<Range<usize>>) -> usize {
+pub extern "C" fn boxer_range_usize_get_end(range: BorrowedPtr<Range<usize>>) -> usize {
     range.with_ref_ok(|range| range.end).or_log(0)
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_range_usize_set_end(range: *mut ValueBox<Range<usize>>, end: usize) {
+pub extern "C" fn boxer_range_usize_set_end(mut range: BorrowedPtr<Range<usize>>, end: usize) {
     range.with_mut_ok(|range| range.end = end).log();
 }

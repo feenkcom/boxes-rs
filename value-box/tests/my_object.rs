@@ -1,40 +1,40 @@
-use value_box::{ReturnBoxerResult, ValueBox, ValueBoxPointer};
+use value_box::{BorrowedPtr, OwnedPtr, ReturnBoxerResult};
 
 #[unsafe(no_mangle)]
-pub fn library_object_create() -> *mut ValueBox<MyObject> {
-    ValueBox::new(MyObject::new()).into_raw()
+pub fn library_object_create() -> OwnedPtr<MyObject> {
+    OwnedPtr::new(MyObject::new())
 }
 
 #[unsafe(no_mangle)]
-pub fn library_object_is_something(object: *mut ValueBox<MyObject>) -> bool {
+pub fn library_object_is_something(object: BorrowedPtr<MyObject>) -> bool {
     object
         .with_ref_ok(|object| object.is_something())
         .unwrap_or(false)
 }
 
 #[unsafe(no_mangle)]
-pub fn library_object_by_ref(object: *mut ValueBox<MyObject>) {
+pub fn library_object_by_ref(object: BorrowedPtr<MyObject>) {
     object.with_ref_ok(|object| object.by_ref()).log();
 }
 
 #[unsafe(no_mangle)]
-pub fn library_object_by_mut(object: *mut ValueBox<MyObject>) {
+pub fn library_object_by_mut(mut object: BorrowedPtr<MyObject>) {
     object.with_mut_ok(|object| object.by_mut()).log();
 }
 
 #[unsafe(no_mangle)]
-pub fn library_object_by_value(object: *mut ValueBox<MyObject>) {
+pub fn library_object_by_value(object: OwnedPtr<MyObject>) {
     object.take_value().map(|object| object.by_value()).log();
 }
 
 #[unsafe(no_mangle)]
-pub fn library_object_by_value_clone(object: *mut ValueBox<MyObject>) {
+pub fn library_object_by_value_clone(object: BorrowedPtr<MyObject>) {
     object.with_clone_ok(|object| object.by_value()).log();
 }
 
 #[unsafe(no_mangle)]
-pub fn library_object_release(object: *mut ValueBox<MyObject>) {
-    object.release();
+pub fn library_object_release(object: OwnedPtr<MyObject>) {
+    drop(object);
 }
 
 #[derive(Debug, Clone)]

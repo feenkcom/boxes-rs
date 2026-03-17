@@ -24,3 +24,9 @@ let utf8_string = vec![104u8, 101, 108, 108, 111, 0];
 let string = StringBox::from_utf8_string(utf8_string.as_slice());
 assert_eq!(string.to_string(), String::from("hello"));
 ```
+
+## License
+
+Copyright feenk gmbh.
+
+Licensed under MIT. See [LICENSE](LICENSE).

@@ -8,3 +8,9 @@
 [mit-url]: https://github.com/feenkcom/boxes-rs/blob/main/LICENSE
 
 Provides Point, Size and u128 boxes that are safe to pass over ffi.
+
+## License
+
+Copyright feenk gmbh.
+
+Licensed under MIT. See [LICENSE](LICENSE).

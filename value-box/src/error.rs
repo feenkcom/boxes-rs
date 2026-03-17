@@ -1,4 +1,3 @@
-use crate::ValueBox;
 use std::any::Any;
 use thiserror::Error;
 use user_error::{UserFacingError, UFE};
@@ -48,10 +47,6 @@ pub trait ReturnBoxerResult<Return: Any> {
     fn or_print(self, value: Return) -> Return;
 }
 
-pub trait ValueBoxIntoRaw<Return: Any> {
-    fn into_raw(self) -> *mut ValueBox<Return>;
-}
-
 impl<Return: Any> ReturnBoxerResult<Return> for Result<Return> {
     fn log(self) {
         if let Err(error) = self {
@@ -79,24 +74,6 @@ impl<Return: Any> ReturnBoxerResult<Return> for Result<Return> {
             }
             value
         })
-    }
-}
-
-impl<Return: Any> ValueBoxIntoRaw<Return> for Result<ValueBox<Return>> {
-    fn into_raw(self) -> *mut ValueBox<Return> {
-        self.map(|value| value.into_raw())
-            .or_log(std::ptr::null_mut())
-    }
-}
-
-impl<Return: Any> ValueBoxIntoRaw<Return> for Result<Option<ValueBox<Return>>> {
-    fn into_raw(self) -> *mut ValueBox<Return> {
-        self.map(|option| {
-            option
-                .map(|value| value.into_raw())
-                .unwrap_or_else(std::ptr::null_mut)
-        })
-        .or_log(std::ptr::null_mut())
     }
 }
 

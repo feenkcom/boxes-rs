@@ -1,5 +1,5 @@
 use array_box::ArrayBox;
-use value_box::{ReturnBoxerResult, ValueBox, ValueBoxPointer};
+use value_box::{BorrowedPtr, ReturnBoxerResult};
 
 /// In-place convert between color formats
 pub fn boxer_array_u8_convert_color_format<Block>(slice: &mut [u8], _converter: Block)
@@ -56,7 +56,7 @@ fn rgba_to_argb(rgba: u32) -> u32 {
 
 /// In-place convert argb to rgba
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_array_u8_argb_to_rgba(array: *mut ValueBox<ArrayBox<u8>>) {
+pub extern "C" fn boxer_array_u8_argb_to_rgba(mut array: BorrowedPtr<ArrayBox<u8>>) {
     array
         .with_mut_ok(|array| boxer_array_u8_convert_color_format(array.to_slice_mut(), argb_to_rgba))
         .log();
@@ -64,7 +64,7 @@ pub extern "C" fn boxer_array_u8_argb_to_rgba(array: *mut ValueBox<ArrayBox<u8>>
 
 /// In-place convert bgra to argb
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_array_u8_bgra_to_argb(array: *mut ValueBox<ArrayBox<u8>>) {
+pub extern "C" fn boxer_array_u8_bgra_to_argb(mut array: BorrowedPtr<ArrayBox<u8>>) {
     array
         .with_mut_ok(|array| {
             boxer_array_u8_convert_color_format(array.to_slice_mut(), bgra_to_argb);
@@ -74,7 +74,7 @@ pub extern "C" fn boxer_array_u8_bgra_to_argb(array: *mut ValueBox<ArrayBox<u8>>
 
 /// In-place convert rgba to argb
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_array_u8_rgba_to_argb(array: *mut ValueBox<ArrayBox<u8>>) {
+pub extern "C" fn boxer_array_u8_rgba_to_argb(mut array: BorrowedPtr<ArrayBox<u8>>) {
     array
         .with_mut_ok(|array| {
             boxer_array_u8_convert_color_format(array.to_slice_mut(), rgba_to_argb);
@@ -84,55 +84,54 @@ pub extern "C" fn boxer_array_u8_rgba_to_argb(array: *mut ValueBox<ArrayBox<u8>>
 
 #[cfg(test)]
 mod tests {
+    use array_box::ArrayBox;
+
     use super::*;
     use crate::*;
 
+    fn borrowed_array(values: Vec<u8>) -> (*mut ArrayBox<u8>, value_box::BorrowedPtr<ArrayBox<u8>>) {
+        let raw = Box::into_raw(Box::new(ArrayBox::from_vector(values)));
+        let borrowed = unsafe { value_box::BorrowedPtr::from_raw(raw) };
+        (raw, borrowed)
+    }
+
     #[test]
     fn test_argb_to_rgba() {
-        let argb = boxer_array_u8_create_with(0, 4);
-        boxer_array_u8_at_put(argb, 0, 255);
-        boxer_array_u8_at_put(argb, 1, 0);
-        boxer_array_u8_at_put(argb, 2, 100);
-        boxer_array_u8_at_put(argb, 3, 200);
+        let (raw, argb) = borrowed_array(vec![255, 0, 100, 200]);
 
         boxer_array_u8_argb_to_rgba(argb);
 
-        assert_eq!(boxer_array_u8_at(argb, 0), 0);
-        assert_eq!(boxer_array_u8_at(argb, 1), 100);
-        assert_eq!(boxer_array_u8_at(argb, 2), 200);
-        assert_eq!(boxer_array_u8_at(argb, 3), 255);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0), 0);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1), 100);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2), 200);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3), 255);
+        unsafe { drop(Box::from_raw(raw)) };
     }
 
     #[test]
     fn test_rgba_to_argb() {
-        let rgba = boxer_array_u8_create_with(0, 4);
-        boxer_array_u8_at_put(rgba, 0, 0);
-        boxer_array_u8_at_put(rgba, 1, 100);
-        boxer_array_u8_at_put(rgba, 2, 200);
-        boxer_array_u8_at_put(rgba, 3, 255);
+        let (raw, rgba) = borrowed_array(vec![0, 100, 200, 255]);
 
         boxer_array_u8_rgba_to_argb(rgba);
 
-        assert_eq!(boxer_array_u8_at(rgba, 0), 255);
-        assert_eq!(boxer_array_u8_at(rgba, 1), 0);
-        assert_eq!(boxer_array_u8_at(rgba, 2), 100);
-        assert_eq!(boxer_array_u8_at(rgba, 3), 200);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0), 255);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1), 0);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2), 100);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3), 200);
+        unsafe { drop(Box::from_raw(raw)) };
     }
 
     #[test]
     fn test_bgra_to_argb() {
-        let bgra = boxer_array_u8_create_with(0, 4);
-        boxer_array_u8_at_put(bgra, 0, 0);
-        boxer_array_u8_at_put(bgra, 1, 100);
-        boxer_array_u8_at_put(bgra, 2, 200);
-        boxer_array_u8_at_put(bgra, 3, 255);
+        let (raw, bgra) = borrowed_array(vec![0, 100, 200, 255]);
 
         boxer_array_u8_bgra_to_argb(bgra);
 
-        assert_eq!(boxer_array_u8_at(bgra, 0), 255);
-        assert_eq!(boxer_array_u8_at(bgra, 1), 200);
-        assert_eq!(boxer_array_u8_at(bgra, 2), 100);
-        assert_eq!(boxer_array_u8_at(bgra, 3), 0);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0), 255);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1), 200);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2), 100);
+        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3), 0);
+        unsafe { drop(Box::from_raw(raw)) };
     }
 
 }

@@ -15,3 +15,9 @@ It provides FFI-friendly entry points for:
 - `string-box`
 - `array-box`
 - `geometry-box`
+
+## License
+
+Copyright feenk gmbh.
+
+Licensed under MIT. See [LICENSE](LICENSE).

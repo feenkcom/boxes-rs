@@ -13,3 +13,9 @@ Create and access an array of items.
 ```rust
 ArrayBox::<u8>::from_vector(vec![0, 1, 2, 3, 4]);
 ```
+
+## License
+
+Copyright feenk gmbh.
+
+Licensed under MIT. See [LICENSE](LICENSE).
