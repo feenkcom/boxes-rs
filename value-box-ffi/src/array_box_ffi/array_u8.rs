@@ -58,7 +58,9 @@ fn rgba_to_argb(rgba: u32) -> u32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn boxer_array_u8_argb_to_rgba(mut array: BorrowedPtr<ArrayBox<u8>>) {
     array
-        .with_mut_ok(|array| boxer_array_u8_convert_color_format(array.to_slice_mut(), argb_to_rgba))
+        .with_mut_ok(|array| {
+            boxer_array_u8_convert_color_format(array.to_slice_mut(), argb_to_rgba)
+        })
         .log();
 }
 
@@ -89,7 +91,9 @@ mod tests {
     use super::*;
     use crate::*;
 
-    fn borrowed_array(values: Vec<u8>) -> (*mut ArrayBox<u8>, value_box::BorrowedPtr<ArrayBox<u8>>) {
+    fn borrowed_array(
+        values: Vec<u8>,
+    ) -> (*mut ArrayBox<u8>, value_box::BorrowedPtr<ArrayBox<u8>>) {
         let raw = Box::into_raw(Box::new(ArrayBox::from_vector(values)));
         let borrowed = unsafe { value_box::BorrowedPtr::from_raw(raw) };
         (raw, borrowed)
@@ -101,10 +105,22 @@ mod tests {
 
         boxer_array_u8_argb_to_rgba(argb);
 
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0), 0);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1), 100);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2), 200);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3), 255);
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0),
+            0
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1),
+            100
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2),
+            200
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3),
+            255
+        );
         unsafe { drop(Box::from_raw(raw)) };
     }
 
@@ -114,10 +130,22 @@ mod tests {
 
         boxer_array_u8_rgba_to_argb(rgba);
 
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0), 255);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1), 0);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2), 100);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3), 200);
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0),
+            255
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1),
+            0
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2),
+            100
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3),
+            200
+        );
         unsafe { drop(Box::from_raw(raw)) };
     }
 
@@ -127,11 +155,22 @@ mod tests {
 
         boxer_array_u8_bgra_to_argb(bgra);
 
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0), 255);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1), 200);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2), 100);
-        assert_eq!(boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3), 0);
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 0),
+            255
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 1),
+            200
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 2),
+            100
+        );
+        assert_eq!(
+            boxer_array_u8_at(unsafe { value_box::BorrowedPtr::from_raw(raw) }, 3),
+            0
+        );
         unsafe { drop(Box::from_raw(raw)) };
     }
-
 }

@@ -1,6 +1,6 @@
 use std::any::Any;
 use thiserror::Error;
-use user_error::{UserFacingError, UFE};
+use user_error::{UFE, UserFacingError};
 
 const SUMMARY_PREFIX: &str = "\u{001b}[97;41;22mError:\u{001b}[91;49;1m ";
 const RESET: &str = "\u{001b}[0m";

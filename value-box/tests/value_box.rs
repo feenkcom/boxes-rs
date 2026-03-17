@@ -3,14 +3,20 @@ use std::ffi::c_void;
 use std::mem::size_of;
 use std::rc::Rc;
 
-use value_box::{from_raw, BorrowedPtr, ErasedBorrowedPtr, OwnedPtr, Result};
+use value_box::{BorrowedPtr, ErasedBorrowedPtr, OwnedPtr, Result, from_raw};
 
 #[test]
 fn value_box_size_in_memory() -> Result<()> {
     assert_eq!(size_of::<BorrowedPtr<c_void>>(), size_of::<*mut c_void>());
     assert_eq!(size_of::<OwnedPtr<c_void>>(), size_of::<*mut c_void>());
-    assert_eq!(size_of::<BorrowedPtr<(u64, u64)>>(), size_of::<*mut (u64, u64)>());
-    assert_eq!(size_of::<OwnedPtr<Box<dyn Error>>>(), size_of::<*mut Box<dyn Error>>());
+    assert_eq!(
+        size_of::<BorrowedPtr<(u64, u64)>>(),
+        size_of::<*mut (u64, u64)>()
+    );
+    assert_eq!(
+        size_of::<OwnedPtr<Box<dyn Error>>>(),
+        size_of::<*mut Box<dyn Error>>()
+    );
     Ok(())
 }
 
@@ -47,7 +53,8 @@ fn erased_value_box_as_non_null() -> Result<()> {
 
 #[test]
 fn value_box_into_erased_raw() -> Result<()> {
-    let erased_value_box_ptr = unsafe { ErasedBorrowedPtr::from_raw(Box::into_raw(Box::new(9_i32)).cast()) };
+    let erased_value_box_ptr =
+        unsafe { ErasedBorrowedPtr::from_raw(Box::into_raw(Box::new(9_i32)).cast()) };
     let value =
         erased_value_box_ptr.with_ptr_ok(|pointer| unsafe { *pointer.as_ptr().cast::<i32>() })?;
     assert_eq!(value, 9);

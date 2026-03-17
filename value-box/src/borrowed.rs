@@ -1,4 +1,4 @@
-use std::any::{type_name, Any};
+use std::any::{Any, type_name};
 use std::ffi::c_void;
 use std::ptr::NonNull;
 

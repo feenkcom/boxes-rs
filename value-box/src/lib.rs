@@ -2,9 +2,9 @@
 extern crate log;
 
 pub use borrowed::*;
+pub use erased::*;
 pub use error::*;
 pub use owned::*;
-pub use erased::*;
 
 mod borrowed;
 mod erased;

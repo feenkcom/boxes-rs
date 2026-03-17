@@ -1,4 +1,4 @@
-use std::any::{type_name, Any};
+use std::any::{Any, type_name};
 use std::mem::ManuallyDrop;
 
 use crate::erased::{from_raw, into_raw};

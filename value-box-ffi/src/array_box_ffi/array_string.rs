@@ -8,9 +8,7 @@ pub extern "C" fn boxer_array_string_create() -> OwnedPtr<ArrayBox<StringBox>> {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn boxer_array_string_get_length(
-    array: BorrowedPtr<ArrayBox<StringBox>>,
-) -> usize {
+pub extern "C" fn boxer_array_string_get_length(array: BorrowedPtr<ArrayBox<StringBox>>) -> usize {
     array.with_ref_ok(|array| array.length).or_log(0)
 }
 

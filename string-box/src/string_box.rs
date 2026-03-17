@@ -152,7 +152,8 @@ impl StringBox {
     pub fn char_index_to_byte_range(&self, index: usize) -> Range<usize> {
         let mut previous_byte_offset = 0_usize;
 
-        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate() {
+        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate()
+        {
             if current_char_index == (index + 1) {
                 return previous_byte_offset..current_byte_offset;
             }
@@ -165,7 +166,8 @@ impl StringBox {
         let mut previous_byte_offset = 0_usize;
         let mut previous_utf16_offset = 0_usize;
 
-        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate() {
+        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate()
+        {
             let delta = (current_byte_offset - previous_byte_offset).div_ceil(2);
             if current_char_index == (index + 1) {
                 return previous_utf16_offset..(previous_utf16_offset + delta);
@@ -181,7 +183,8 @@ impl StringBox {
         let mut previous_byte_offset = 0_usize;
         let mut previous_utf16_offset = 0_usize;
 
-        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate() {
+        for (current_char_index, (current_byte_offset, _)) in self.string.char_indices().enumerate()
+        {
             let delta = (current_byte_offset - previous_byte_offset).div_ceil(2);
             let current_utf16_offset = previous_utf16_offset + delta;
 
