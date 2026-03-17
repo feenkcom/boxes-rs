@@ -86,9 +86,7 @@ fn expand_ffi(function: ItemFn) -> syn::Result<proc_macro2::TokenStream> {
                 };
 
                 if let Type::Reference(TypeReference {
-                    elem,
-                    mutability,
-                    ..
+                    elem, mutability, ..
                 }) = argument.ty.as_ref()
                 {
                     let arg_mutability = mutability.as_ref();
@@ -180,7 +178,8 @@ fn is_owned_ptr_type(ty: &Type) -> bool {
                 return false;
             };
 
-            if segment.ident == "Box" && matches!(segment.arguments, PathArguments::AngleBracketed(_))
+            if segment.ident == "Box"
+                && matches!(segment.arguments, PathArguments::AngleBracketed(_))
             {
                 return true;
             }

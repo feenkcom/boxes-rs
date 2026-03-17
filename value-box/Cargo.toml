@@ -18,8 +18,5 @@ thiserror.workspace = true
 user-error.workspace = true
 anyhow = { workspace = true, optional = true }
 
-[dev-dependencies]
-value-box-derive.workspace = true
-
 [features]
 default = [ ]
